@@ -3,9 +3,12 @@
 
 #include "stdafx.h"
 
+//AJINKYA LOOK HERE
 
 int main()
 {
+	if (true == 0) {
+
+	}
     return 0;
 }
-
