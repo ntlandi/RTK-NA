@@ -42,52 +42,52 @@ int main(int argc, char* argv[])
 
 	//Zoning Code
 	int maxnum = 0;
-	for (int i = 0; i < static_cast<int>(Top.size()); i++) {
-		maxnum = (Top[i] > maxnum) ? Top[i] : maxnum;
-		maxnum = (Bottom[i] > maxnum) ? Bottom[i] : maxnum;
+	for (int i = 0; i < static_cast<int>(top.size()); i++) {
+		maxnum = (top[i] > maxnum) ? top[i] : maxnum;
+		maxnum = (bot[i] > maxnum) ? bot[i] : maxnum;
 	}
-	for (int k = 1; k <= static_cast<int>(Top.size()); k++) {
-		if (netcol_max.find(Top[k - 1]) == netcol_max.end()) {
+	for (int k = 1; k <= static_cast<int>(top.size()); k++) {
+		if (netcol_max.find(top[k - 1]) == netcol_max.end()) {
 			//cout << "Not found";
-			netcol_max[Top[k - 1]] = k;
-			//cout << netcol_max[Top[k - 1]];
+			netcol_max[top[k - 1]] = k;
+			//cout << netcol_max[top[k - 1]];
 		}
-		else if (k>netcol_max[Top[k - 1]]) {
-			netcol_max[Top[k - 1]] = k;
+		else if (k>netcol_max[top[k - 1]]) {
+			netcol_max[top[k - 1]] = k;
 			//cout << "Found";
 		}
-		if (netcol_max.find(Bottom[k - 1]) == netcol_max.end()) {
+		if (netcol_max.find(bot[k - 1]) == netcol_max.end()) {
 			//cout << "Not found";
-			netcol_max[Bottom[k - 1]] = k;
-			//cout << netcol_max[Top[k - 1]];
+			netcol_max[bot[k - 1]] = k;
+			//cout << netcol_max[top[k - 1]];
 		}
-		else if (k>netcol_max[Bottom[k - 1]]) {
-			netcol_max[Bottom[k - 1]] = k;
+		else if (k>netcol_max[bot[k - 1]]) {
+			netcol_max[bot[k - 1]] = k;
 			//cout << "Found";
 		}
 
-		if (netcol_min.find(Top[k - 1]) == netcol_min.end()) {
+		if (netcol_min.find(top[k - 1]) == netcol_min.end()) {
 			//cout << "Not found";
-			netcol_min[Top[k - 1]] = k;
-			//cout << netcol_min[Top[k - 1]];
+			netcol_min[top[k - 1]] = k;
+			//cout << netcol_min[top[k - 1]];
 		}
-		else if (k<netcol_min[Top[k - 1]]) {
-			netcol_min[Top[k - 1]] = k;
+		else if (k<netcol_min[top[k - 1]]) {
+			netcol_min[top[k - 1]] = k;
 			//cout << "Found";
 		}
-		if (netcol_min.find(Bottom[k - 1]) == netcol_min.end()) {
+		if (netcol_min.find(bot[k - 1]) == netcol_min.end()) {
 			//cout << "Not found";
-			netcol_min[Bottom[k - 1]] = k;
-			//cout << netcol_min[Top[k - 1]];
+			netcol_min[bot[k - 1]] = k;
+			//cout << netcol_min[top[k - 1]];
 		}
-		else if (k<netcol_min[Bottom[k - 1]]) {
-			netcol_min[Bottom[k - 1]] = k;
+		else if (k<netcol_min[bot[k - 1]]) {
+			netcol_min[bot[k - 1]] = k;
 			//cout << "Found";
 		}
 	}
 
 	vector< vector<int> > col;
-	for (int i1 = 0; i1 < static_cast<int>(Top.size()); i1++) {
+	for (int i1 = 0; i1 < static_cast<int>(top.size()); i1++) {
 		vector<int> row; // Create an empty row
 		for (int j1 = 1; j1 < maxnum + 1; j1++) {
 			if (i1 <= netcol_max[j1] && i1 >= netcol_min[j1]) {
@@ -99,9 +99,9 @@ int main(int argc, char* argv[])
 
 	int p = 0;
 
-	vector<vector<int>> zone(static_cast<int>(Top.size()), vector<int>(5, 0));
-	for (int k1 = 1; k1 < static_cast<int>(Top.size()) - 1; k1++) {
-		//if (k1== static_cast<int>(Top.size()-1) {
+	vector<vector<int>> zone(static_cast<int>(top.size()), vector<int>(5, 0));
+	for (int k1 = 1; k1 < static_cast<int>(top.size()) - 1; k1++) {
+		//if (k1== static_cast<int>(top.size()-1) {
 
 		if ((includes(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end())) || (includes(col[k1 + 1].begin(), col[k1 + 1].end(), col[k1].begin(), col[k1].end()))) {
 			//cout << "Subset";
