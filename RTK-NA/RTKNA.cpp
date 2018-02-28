@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
 
 void parse(string fileloc) {
 	ifstream file;
-	file.open("C:\\Users\\Nick Landi\\Desktop\\test.txt");
+	file.open("C:\\Users\\ntlan\\Desktop\\test.txt");
 
 	string line;
 	getline(file, line);
@@ -200,7 +200,12 @@ void arraytonet() {
 		else if (net != -1) {
 			netlist[net]->indexes.push_back(i);
 			netlist[net]->directions.push_back(false);
-			netlist[net]->endind = i;
+			if (netlist[net]->startind > i) {
+				netlist[net]->startind = i;
+			}
+			if (netlist[net]->endind < i) {
+				netlist[net]->endind = i;
+			}
 		}
 		else {
 			next->startind = i;
