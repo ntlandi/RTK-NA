@@ -27,20 +27,30 @@ struct net {
 	int startind, endind;
 };
 
+struct VCG {
+	net *top;
+	net *bot;
+};
+
 bool sortNet(const net *a, const net *b);
 
 net * first;
 vector<net*> netlist;
-
+VCG *source, *sink;
 
 
 void parse(string);
 void arraytonet();
 int findExistingNet(int);
+void makeVCG();
+
 
 int main(int argc, char* argv[])
 {
-	parse(argv[0]);
+	//VCG 
+	string filepath;
+	getline(cin, filepath);
+	parse(filepath);
 	arraytonet();
 
 	//Zoning Code
@@ -138,7 +148,7 @@ int main(int argc, char* argv[])
 
 void parse(string fileloc) {
 	ifstream file;
-	file.open("C:\\Users\\ntlan\\Desktop\\test.txt");
+	file.open(fileloc);
 
 	string line;
 	getline(file, line);
@@ -233,4 +243,8 @@ int findExistingNet(int net) {
 	}
 
 	return -1;
+}
+
+void makeVCG() {
+
 }
