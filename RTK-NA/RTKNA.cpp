@@ -15,7 +15,6 @@
 using namespace std;
 vector<int> top;
 vector<int> bot;
-vector<vector<int>> zone;
 
 map<int, int> netcol_max; //net number, max col
 map<int, int> netcol_min; //net no , min col
@@ -29,24 +28,21 @@ struct net {
 };
 
 struct VCG {
-	vector<int> top;
-	int netid;
+	net *top;
+	net *bot;
 };
 
 bool sortNet(const net *a, const net *b);
 
 net * first;
 vector<net*> netlist;
-vector<VCG*> allVCG, source, sink;
+VCG *source, *sink;
 
 
 void parse(string);
 void arraytonet();
 int findExistingNet(int);
 void makeVCG();
-void Zoning();
-int VCGexists(int);
-void transientRemoval();
 
 
 int main(int argc, char* argv[])
@@ -56,35 +52,59 @@ int main(int argc, char* argv[])
 	getline(cin, filepath);
 	parse(filepath);
 	arraytonet();
-	makeVCG();
 
-	//Zoning Code
-	zone = vector<vector<int>>(static_cast<int>(top.size()), vector<int>(5, 0));
-	Zoning();
-
-    return 0;
-}
-
-
-///////////////////////////////////////////////////////////////////////
-//                             Zoning 								 //
-///////////////////////////////////////////////////////////////////////
-
-//creates zones for future use
-void Zoning() {
 	//Zoning Code
 	int maxnum = 0;
 	for (int i = 0; i < static_cast<int>(top.size()); i++) {
 		maxnum = (top[i] > maxnum) ? top[i] : maxnum;
 		maxnum = (bot[i] > maxnum) ? bot[i] : maxnum;
 	}
+	for (int k = 1; k <= static_cast<int>(top.size()); k++) {
+		if (netcol_max.find(top[k - 1]) == netcol_max.end()) {
+			//cout << "Not found";
+			netcol_max[top[k - 1]] = k;
+			//cout << netcol_max[top[k - 1]];
+		}
+		else if (k>netcol_max[top[k - 1]]) {
+			netcol_max[top[k - 1]] = k;
+			//cout << "Found";
+		}
+		if (netcol_max.find(bot[k - 1]) == netcol_max.end()) {
+			//cout << "Not found";
+			netcol_max[bot[k - 1]] = k;
+			//cout << netcol_max[top[k - 1]];
+		}
+		else if (k>netcol_max[bot[k - 1]]) {
+			netcol_max[bot[k - 1]] = k;
+			//cout << "Found";
+		}
+
+		if (netcol_min.find(top[k - 1]) == netcol_min.end()) {
+			//cout << "Not found";
+			netcol_min[top[k - 1]] = k;
+			//cout << netcol_min[top[k - 1]];
+		}
+		else if (k<netcol_min[top[k - 1]]) {
+			netcol_min[top[k - 1]] = k;
+			//cout << "Found";
+		}
+		if (netcol_min.find(bot[k - 1]) == netcol_min.end()) {
+			//cout << "Not found";
+			netcol_min[bot[k - 1]] = k;
+			//cout << netcol_min[top[k - 1]];
+		}
+		else if (k<netcol_min[bot[k - 1]]) {
+			netcol_min[bot[k - 1]] = k;
+			//cout << "Found";
+		}
+	}
 
 	vector< vector<int> > col;
 	for (int i1 = 0; i1 < static_cast<int>(top.size()); i1++) {
 		vector<int> row; // Create an empty row
-		for (int j1 = 0; j1 < maxnum; j1++) {
-			if (i1 <= netlist[j1]->endind && i1 >= netlist[j1]->startind) {
-				row.push_back(j1 + 1); // Add an element (column) to the row
+		for (int j1 = 1; j1 < maxnum + 1; j1++) {
+			if (i1 <= netcol_max[j1] && i1 >= netcol_min[j1]) {
+				row.push_back(j1); // Add an element (column) to the row
 			}
 		}
 		col.push_back(row); // Add the row to the main vector
@@ -92,7 +112,7 @@ void Zoning() {
 
 	int p = 0;
 
-
+	vector<vector<int>> zone(static_cast<int>(top.size()), vector<int>(5, 0));
 	for (int k1 = 1; k1 < static_cast<int>(top.size()) - 1; k1++) {
 		//if (k1== static_cast<int>(top.size()-1) {
 
@@ -123,86 +143,9 @@ void Zoning() {
 			cout << " " << zone[k1][k2];
 		}
 	}
-
+    return 0;
 }
 
-
-
-///////////////////////////////////////////////////////////////////////
-//                         VCG construction							 //
-///////////////////////////////////////////////////////////////////////
-
-//Constructs the original VCG graph
-void makeVCG() {
-	//determine 
-	for (size_t i = 0; i < top.size(); i++) {
-		int at = VCGexists(top[i]);
-		//VCG exists
-		if (at != -1) {
-			allVCG[at]->top.push_back(bot[i]);
-		}
-		//VCG does not exist
-		else if(at == -1 && top[i] != 0 && bot[i] != 0) {
-			VCG *n = new VCG;
-			n->netid = top[i];
-			n->top.push_back(bot[i]);
-			allVCG.push_back(n);
-		}
-	}
-
-	for (size_t i = 1; i < netlist.size(); i++) {
-		if (VCGexists(i) == -1) {
-			VCG *n = new VCG();
-			n->netid = i;
-			allVCG.push_back(n);
-			sink.push_back(n);
-		}
-	}
-
-	transientRemoval();
-}
-
-//returns index of netid requested
-//for use with makeVCG and transient removal
-int VCGexists(int netid) {
-	for (size_t i = 0; i < allVCG.size(); i++) {
-		if (allVCG[i]->netid == netid) {
-			return i;
-		}
-	}
-
-	return -1;
-}
-
-//Removes transient edges with low effort O(n3)
-void transientRemoval() {
-	vector<int> possibleRemove;
-
-
-	//remove transient edges
-	//iterate through all VCG
-	for (size_t i = 0; i < allVCG.size(); i++) {
-		possibleRemove = allVCG[i]->top;
-		//iterate through decendents
-		for (size_t j = 0; j < possibleRemove.size(); j++) {
-			//get list of decendents of decendents
-			VCG *check = allVCG[VCGexists(possibleRemove[j])];
-			//remove common decendents from tallest ancestor
-			for (size_t k = 0; k < check->top.size(); k++) {
-				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->top[k]), possibleRemove.end());
-			}
-		}
-		allVCG[i]->top = possibleRemove;
-	}
-}
-
-
-
-///////////////////////////////////////////////////////////////////////
-//                             Parsing								 //
-///////////////////////////////////////////////////////////////////////
-//parses file into vector of ints to be used later for VCG creation
-//and zoning
 void parse(string fileloc) {
 	ifstream file;
 	file.open(fileloc);
@@ -223,20 +166,20 @@ void parse(string fileloc) {
 	getline(file, line);
 	while (index < line.length()) {
 		index = line.find(" ", (size_t)previndex);
-		bot.push_back(stoi(line.substr(previndex, index - previndex)));
+		bot.push_back(stoi(line.substr(previndex, index - previndex )));
 		previndex = index + 1;
 	}
 }
 
-//converts the input into a useable netlist using net structs
 void arraytonet() {
 	int previndex;
-	//top part of input
+	//top part
 	for (int i = 0; i < top.size(); i++) {
 		net *next = new net;
 		int nextnet = top.at(i);
 		int net = findExistingNet(nextnet);
 
+		//auto it = (find_if(netlist.begin(), netlist.end(), [&nextnet](const net& p) {return p.netnum == nextnet; }));
 		if (nextnet == 0) {
 			continue;
 		}
@@ -254,12 +197,13 @@ void arraytonet() {
 			netlist.push_back(next);
 		}
 	}
-	//bottom part of input
+	//bottom part
 	for (int i = 0; i < bot.size(); i++) {
 		net *next = new net;
 		int nextnet = bot.at(i);
 		int net = findExistingNet(nextnet);
 
+		//auto it = (find_if(netlist.begin(), netlist.end(), [&nextnet](const net& p) {return p.netnum == nextnet; }));
 		if (nextnet == 0) {
 			continue;
 		}
@@ -286,12 +230,10 @@ void arraytonet() {
 	sort(netlist.begin(), netlist.end(), sortNet);
 }
 
-//accesory function to sort the netlist by netnum
 bool sortNet(const net *a, const net *b) {
 	return a->netnum < b->netnum;
 }
 
-//checks to see if there is an existing net with netnum net
 int findExistingNet(int net) {
 
 	for (int i = 0; i < netlist.size(); i++) {
@@ -301,4 +243,8 @@ int findExistingNet(int net) {
 	}
 
 	return -1;
+}
+
+void makeVCG() {
+
 }
