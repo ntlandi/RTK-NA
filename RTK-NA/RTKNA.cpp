@@ -16,6 +16,10 @@ using namespace std;
 vector<int> top;
 vector<int> bot;
 vector<vector<int>> zone;
+vector<vector<int>> final_zone;
+vector<int> union_zone;
+vector<int> union_zone_diff;
+vector<vector<int>> ini_zone;
 
 map<int, int> netcol_max; //net number, max col
 map<int, int> netcol_min; //net no , min col
@@ -46,7 +50,11 @@ int findExistingNet(int);
 void makeVCG();
 void Zoning();
 int VCGexists(int);
-void transientRemoval();
+void transientRemoval(); 
+void Zone_Sort();
+void Zone_union();
+void Zone_diff_union();
+
 
 
 int main(int argc, char* argv[])
@@ -59,8 +67,13 @@ int main(int argc, char* argv[])
 	makeVCG();
 
 	//Zoning Code
+	
 	zone = vector<vector<int>>(static_cast<int>(top.size()), vector<int>(5, 0));
 	Zoning();
+	final_zone.resize(static_cast<int>(zone.size()));
+	Zone_Sort();
+	Zone_union();
+	Zone_diff_union();
 
 	return 0;
 }
@@ -126,7 +139,63 @@ void Zoning() {
 
 }
 
+void Zone_union() {
+	set<int> all;
+	for (int i = 0; i < zone.size(); i++) {
+		all.insert(zone[i].begin(), zone[i].end());
+	}
+	union_zone = vector<int>(all.begin(), all.end());
+}
 
+
+void Zone_Sort() {
+	final_zone.resize(static_cast<int>(zone.size()));
+	ini_zone.resize(static_cast<int>(zone.size()));
+	vector<int>::iterator it1;
+	vector<int>::iterator it2;
+
+	vector<int> temp_diff_union;
+
+	vector<int> last_zone(10);
+
+	for (int l1 = 0; l1 < static_cast<int>(zone.size()) - 1; l1++) {
+		vector<int> temp_zone_diff(10);
+
+		it1 = set_difference(zone[l1].begin(), zone[l1].end(), zone[l1 + 1].begin(), zone[l1 + 1].end(), temp_zone_diff.begin());
+		temp_zone_diff.resize(it1 - temp_zone_diff.begin());
+
+		final_zone[l1] = temp_zone_diff;
+
+		vector<int> temp_zone_diff1(10);
+
+		if (l1 == 0) {
+			ini_zone[l1] = zone[l1];
+		}
+		it2 = set_difference(zone[l1 + 1].begin(), zone[l1 + 1].end(), zone[l1].begin(), zone[l1].end(), temp_zone_diff1.begin());
+		temp_zone_diff1.resize(it2 - temp_zone_diff1.begin());
+
+		ini_zone[l1 + 1] = temp_zone_diff1;
+
+	}
+
+
+}
+
+void Zone_diff_union() {
+	set<int> all1;
+	vector<int>::iterator it2;
+	vector<int> temp_zone_union(10);
+
+	for (int i = 0; i < final_zone.size(); i++) {
+		all1.insert(final_zone[i].begin(), final_zone[i].end());
+	}
+	union_zone_diff = vector<int>(all1.begin(), all1.end());
+
+	it2 = set_difference(union_zone.begin(), union_zone.end(), union_zone_diff.begin(), union_zone_diff.end(), temp_zone_union.begin());
+	temp_zone_union.resize(it2 - temp_zone_union.begin());
+
+	final_zone[static_cast<int>(zone.size()) - 1] = temp_zone_union;
+}
 
 ///////////////////////////////////////////////////////////////////////
 //                         VCG construction							 //
