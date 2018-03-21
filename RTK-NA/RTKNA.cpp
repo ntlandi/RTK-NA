@@ -33,15 +33,16 @@ struct net {
 };
 
 struct VCG {
-	vector<int> top;
+	vector<int> decendents, predecessors;
 	int netid;
+	int distanceToSource = 0;
 };
 
 bool sortNet(const net *a, const net *b);
 
 net * first;
 vector<net*> netlist;
-vector<VCG*> allVCG, source, sink;
+vector<VCG*> allVCG, source, sink, dVec;
 
 
 void parse(string);
@@ -54,6 +55,9 @@ void transientRemoval();
 void Zone_Sort();
 void Zone_union();
 void Zone_diff_union();
+void sourceAndSink();
+void findDistance();
+void dijkstra(int, int);
 
 
 
@@ -65,6 +69,8 @@ int main(int argc, char* argv[])
 	parse(filepath);
 	arraytonet();
 	makeVCG();
+	findDistance();
+
 
 	//Zoning Code
 	
@@ -208,13 +214,28 @@ void makeVCG() {
 		int at = VCGexists(top[i]);
 		//VCG exists
 		if (at != -1) {
-			allVCG[at]->top.push_back(bot[i]);
+			allVCG[at]->decendents.push_back(bot[i]);
 		}
 		//VCG does not exist
 		else if (at == -1 && top[i] != 0 && bot[i] != 0) {
 			VCG *n = new VCG;
 			n->netid = top[i];
-			n->top.push_back(bot[i]);
+			n->decendents.push_back(bot[i]);
+			allVCG.push_back(n);
+		}
+	}
+
+	for (size_t i = 0; i < bot.size(); i++) {
+		int at = VCGexists(bot[i]);
+		//VCG exists
+		if (at != -1) {
+			allVCG[at]->predecessors.push_back(bot[i]);
+		}
+		//VCG does not exist
+		else if (at == -1 && top[i] != 0 && bot[i] != 0) {
+			VCG *n = new VCG;
+			n->netid = bot[i];
+			n->predecessors.push_back(bot[i]);
 			allVCG.push_back(n);
 		}
 	}
@@ -229,6 +250,7 @@ void makeVCG() {
 	}
 
 	transientRemoval();
+	sourceAndSink();
 }
 
 //returns index of netid requested
@@ -251,21 +273,60 @@ void transientRemoval() {
 	//remove transient edges
 	//iterate through all VCG
 	for (size_t i = 0; i < allVCG.size(); i++) {
-		possibleRemove = allVCG[i]->top;
+		possibleRemove = allVCG[i]->decendents;
 		//iterate through decendents
 		for (size_t j = 0; j < possibleRemove.size(); j++) {
 			//get list of decendents of decendents
 			VCG *check = allVCG[VCGexists(possibleRemove[j])];
 			//remove common decendents from tallest ancestor
-			for (size_t k = 0; k < check->top.size(); k++) {
-				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->top[k]), possibleRemove.end());
+			for (size_t k = 0; k < check->decendents.size(); k++) {
+				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->decendents[k]), possibleRemove.end());
 			}
 		}
-		allVCG[i]->top = possibleRemove;
+		allVCG[i]->decendents = possibleRemove;
+	}
+
+	for (size_t i = 0; i < allVCG.size(); i++) {
+		possibleRemove = allVCG[i]->predecessors;
+		//iterate through predecessors
+		for (size_t j = 0; j < possibleRemove.size(); j++) {
+			//get list of preds of preds
+			VCG *check = allVCG[VCGexists(possibleRemove[j])];
+			//remove common predecessor from tallest offspring
+			for (size_t k = 0; k < check->decendents.size(); k++) {
+				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->decendents[k]), possibleRemove.end());
+			}
+		}
+		allVCG[i]->predecessors = possibleRemove;
 	}
 }
 
+void sourceAndSink() {
+	for (size_t i = 0; i < allVCG.size(); i++) {
+		if (allVCG[i]->decendents.size() == 0) {
+			sink.push_back(allVCG[i]);
+		}
+		if (allVCG[i]->predecessors.size() == 0) {
+			source.push_back(allVCG[i]);
+		}
+	}
+}
 
+void findDistance() {
+
+	for (size_t i = 0; i < source.size(); i++) {
+		dijkstra(source[i]->netid, 0);
+	}
+}
+
+void dijkstra(int netid, int counter) {
+	if (counter > allVCG[VCGexists(netid)]->distanceToSource) {
+		allVCG[VCGexists(netid)]->distanceToSource = counter;
+	}
+	for (size_t i = 0; i < allVCG[VCGexists(netid)]->decendents.size(); i++) {
+		dijkstra(allVCG[VCGexists(netid)]->decendents[i], counter + 1);
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////
 //                             Parsing								 //
