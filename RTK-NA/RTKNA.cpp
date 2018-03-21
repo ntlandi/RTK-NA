@@ -10,7 +10,6 @@
 #include <fstream>
 #include <iostream>
 #include <set>
-#include <map>
 
 using namespace std;
 vector<int> top;
@@ -20,9 +19,6 @@ vector<vector<int>> final_zone;
 vector<int> union_zone;
 vector<int> union_zone_diff;
 vector<vector<int>> ini_zone;
-
-map<int, int> netcol_max; //net number, max col
-map<int, int> netcol_min; //net no , min col
 
 struct net {
 	vector<int> indexes;
@@ -36,6 +32,7 @@ struct VCG {
 	vector<int> decendents, predecessors;
 	string netid;
 	int distanceToSource = 0;
+	int distanceToSink = 0;
 };
 
 bool sortNet(const net *a, const net *b);
@@ -43,7 +40,6 @@ bool sortNet(const net *a, const net *b);
 net * first;
 vector<net*> netlist;
 vector<VCG*> allVCG, source, sink, dVec;
-
 
 void parse(string);
 void arraytonet();
@@ -57,7 +53,11 @@ void Zone_union();
 void Zone_diff_union();
 void sourceAndSink();
 void findDistance();
-void dijkstra(int, int);
+void distFromSource(int, int);
+void distFromSink(int, int);
+void Merge();
+vector<string> zoneConvertToString(int index);
+vector<string> zoneConvertToStringFinal(int index); //Because we're lazy
 
 
 
@@ -84,6 +84,38 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+
+///////////////////////////////////////////////////////////////////////
+//                             Merging 								 //
+///////////////////////////////////////////////////////////////////////
+
+void Merge() {
+	/*vector<string> L,R,zoneHold;
+	for (size_t i = 0; i < zone.size() - 1; i++) {
+		zoneHold = zoneConvertToString(i);
+		R = zoneConvertToStringFinal(i + 1);
+		L.insert(L.end(), zoneHold.begin(), zoneHold.end());
+		for (size_t i = 0; i < ; i++) {
+
+		}
+	}*/
+}
+
+vector<string> zoneConvertToString(int index) {
+	vector<string> ret;
+	for (size_t i = 0; i < ini_zone[index].size(); i++) {
+		ret.push_back(to_string(ini_zone[index][i]));
+	}
+	return ret;
+}
+
+vector<string> zoneConvertToStringFinal(int index) {
+	vector<string> ret;
+	for (size_t i = 0; i < final_zone[index].size(); i++) {
+		ret.push_back(to_string(final_zone[index][i]));
+	}
+	return ret;
+}
 
 ///////////////////////////////////////////////////////////////////////
 //                             Zoning 								 //
@@ -229,13 +261,13 @@ void makeVCG() {
 		int at = VCGexists(bot[i]);
 		//VCG exists
 		if (at != -1) {
-			allVCG[at]->predecessors.push_back(bot[i]);
+			allVCG[at]->predecessors.push_back(top[i]);
 		}
 		//VCG does not exist
 		else if (at == -1 && top[i] != 0 && bot[i] != 0) {
 			VCG *n = new VCG;
 			n->netid = to_string(bot[i]);
-			n->predecessors.push_back(bot[i]);
+			n->predecessors.push_back(top[i]);
 			allVCG.push_back(n);
 		}
 	}
@@ -293,8 +325,8 @@ void transientRemoval() {
 			//get list of preds of preds
 			VCG *check = allVCG[VCGexists(possibleRemove[j])];
 			//remove common predecessor from tallest offspring
-			for (size_t k = 0; k < check->decendents.size(); k++) {
-				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->decendents[k]), possibleRemove.end());
+			for (size_t k = 0; k < check->predecessors.size(); k++) {
+				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->predecessors[k]), possibleRemove.end());
 			}
 		}
 		allVCG[i]->predecessors = possibleRemove;
@@ -313,18 +345,30 @@ void sourceAndSink() {
 }
 
 void findDistance() {
-
 	for (size_t i = 0; i < source.size(); i++) {
-		dijkstra(stoi(source[i]->netid), 0);
+		distFromSource(stoi(source[i]->netid), 0);
+	}
+
+	for (size_t i = 0; i < sink.size(); i++) {
+		distFromSink(stoi(sink[i]->netid),0);
 	}
 }
 
-void dijkstra(int netid, int counter) {
+void distFromSource(int netid, int counter) {
 	if (counter > allVCG[VCGexists(netid)]->distanceToSource) {
 		allVCG[VCGexists(netid)]->distanceToSource = counter;
 	}
 	for (size_t i = 0; i < allVCG[VCGexists(netid)]->decendents.size(); i++) {
-		dijkstra(allVCG[VCGexists(netid)]->decendents[i], counter + 1);
+		distFromSource(allVCG[VCGexists(netid)]->decendents[i], counter + 1);
+	}
+}
+
+void distFromSink(int netid, int counter) {
+	if (counter > allVCG[VCGexists(netid)]->distanceToSink) {
+		allVCG[VCGexists(netid)]->distanceToSink = counter;
+	}
+	for (size_t i = 0; i < allVCG[VCGexists(netid)]->predecessors.size(); i++) {
+		distFromSink(allVCG[VCGexists(netid)]->predecessors[i], counter + 1);
 	}
 }
 
