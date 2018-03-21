@@ -20,6 +20,7 @@ vector<int> union_zone;
 vector<int> union_zone_diff;
 vector<vector<int>> ini_zone;
 
+//hello
 struct net {
 	vector<int> indexes;
 	vector<bool> directions;
