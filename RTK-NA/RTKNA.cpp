@@ -14,11 +14,11 @@
 using namespace std;
 vector<int> top;
 vector<int> bot;
-vector<vector<int>> zone;
-vector<vector<int>> final_zone;
-vector<int> union_zone;
-vector<int> union_zone_diff;
-vector<vector<int>> ini_zone;
+vector<vector<string>> zone;
+vector<vector<string>> final_zone;
+vector<string> union_zone;
+vector<string> union_zone_diff;
+vector<vector<string>> ini_zone;
 
 
 struct net {
@@ -131,27 +131,26 @@ void Zoning() {
 		maxnum = (bot[i] > maxnum) ? bot[i] : maxnum;
 	}
 
-	vector< vector<int> > col;
+	vector< vector<string> > col;
 	for (int i1 = 0; i1 < static_cast<int>(top.size()); i1++) {
-		vector<int> row; // Create an empty row
+		vector<string> row; // Create an empty row
 		for (int j1 = 0; j1 < maxnum; j1++) {
 			if (i1 <= netlist[j1]->endind && i1 >= netlist[j1]->startind) {
-				row.push_back(j1 + 1); // Add an element (column) to the row
+				row.push_back(to_string(j1 + 1)); // Add an element (column) to the row
 			}
 		}
 		col.push_back(row); // Add the row to the main vector
 	}
 
 	int p = 0;
-
-
+	
 	for (int k1 = 1; k1 < static_cast<int>(top.size()) - 1; k1++) {
 		//if (k1== static_cast<int>(top.size()-1) {
 
 		if ((includes(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end())) || (includes(col[k1 + 1].begin(), col[k1 + 1].end(), col[k1].begin(), col[k1].end()))) {
 			//cout << "Subset";
-			std::vector<int> temp_colunion(static_cast<int>(col[k1].size()) * 10);
-			std::vector<int>::iterator it;
+			std::vector<string> temp_colunion(static_cast<int>(col[k1].size()) * 10);
+			std::vector<string>::iterator it;
 			it = set_union(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end(), temp_colunion.begin());
 			temp_colunion.resize(it - temp_colunion.begin());
 
@@ -179,33 +178,33 @@ void Zoning() {
 }
 
 void Zone_union() {
-	set<int> all;
+	set<string> all;
 	for (int i = 0; i < zone.size(); i++) {
 		all.insert(zone[i].begin(), zone[i].end());
 	}
-	union_zone = vector<int>(all.begin(), all.end());
+	union_zone = vector<string>(all.begin(), all.end());
 }
 
 
 void Zone_Sort() {
 	final_zone.resize(static_cast<int>(zone.size()));
 	ini_zone.resize(static_cast<int>(zone.size()));
-	vector<int>::iterator it1;
-	vector<int>::iterator it2;
+	vector<string>::iterator it1;
+	vector<string>::iterator it2;
 
-	vector<int> temp_diff_union;
+	vector<string> temp_diff_union;
 
-	vector<int> last_zone(10);
+	vector<string> last_zone(10);
 
 	for (int l1 = 0; l1 < static_cast<int>(zone.size()) - 1; l1++) {
-		vector<int> temp_zone_diff(10);
+		vector<string> temp_zone_diff(10);
 
 		it1 = set_difference(zone[l1].begin(), zone[l1].end(), zone[l1 + 1].begin(), zone[l1 + 1].end(), temp_zone_diff.begin());
 		temp_zone_diff.resize(it1 - temp_zone_diff.begin());
 
 		final_zone[l1] = temp_zone_diff;
 
-		vector<int> temp_zone_diff1(10);
+		vector<string> temp_zone_diff1(10);
 
 		if (l1 == 0) {
 			ini_zone[l1] = zone[l1];
@@ -221,14 +220,14 @@ void Zone_Sort() {
 }
 
 void Zone_diff_union() {
-	set<int> all1;
-	vector<int>::iterator it2;
-	vector<int> temp_zone_union(10);
+	set<string> all1;
+	vector<string>::iterator it2;
+	vector<string> temp_zone_union(10);
 
 	for (int i = 0; i < final_zone.size(); i++) {
 		all1.insert(final_zone[i].begin(), final_zone[i].end());
 	}
-	union_zone_diff = vector<int>(all1.begin(), all1.end());
+	union_zone_diff = vector<string>(all1.begin(), all1.end());
 
 	it2 = set_difference(union_zone.begin(), union_zone.end(), union_zone_diff.begin(), union_zone_diff.end(), temp_zone_union.begin());
 	temp_zone_union.resize(it2 - temp_zone_union.begin());
