@@ -34,7 +34,7 @@ struct net {
 
 struct VCG {
 	vector<int> decendents, predecessors;
-	int netid;
+	string netid;
 	int distanceToSource = 0;
 };
 
@@ -219,7 +219,7 @@ void makeVCG() {
 		//VCG does not exist
 		else if (at == -1 && top[i] != 0 && bot[i] != 0) {
 			VCG *n = new VCG;
-			n->netid = top[i];
+			n->netid = to_string(top[i]);
 			n->decendents.push_back(bot[i]);
 			allVCG.push_back(n);
 		}
@@ -234,7 +234,7 @@ void makeVCG() {
 		//VCG does not exist
 		else if (at == -1 && top[i] != 0 && bot[i] != 0) {
 			VCG *n = new VCG;
-			n->netid = bot[i];
+			n->netid = to_string(bot[i]);
 			n->predecessors.push_back(bot[i]);
 			allVCG.push_back(n);
 		}
@@ -257,7 +257,7 @@ void makeVCG() {
 //for use with makeVCG and transient removal
 int VCGexists(int netid) {
 	for (size_t i = 0; i < allVCG.size(); i++) {
-		if (allVCG[i]->netid == netid) {
+		if (allVCG[i]->netid == to_string(netid)) {
 			return i;
 		}
 	}
@@ -315,7 +315,7 @@ void sourceAndSink() {
 void findDistance() {
 
 	for (size_t i = 0; i < source.size(); i++) {
-		dijkstra(source[i]->netid, 0);
+		dijkstra(stoi(source[i]->netid), 0);
 	}
 }
 
