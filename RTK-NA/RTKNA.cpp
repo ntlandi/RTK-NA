@@ -19,7 +19,8 @@ vector<vector<int>> final_zone;
 vector<int> union_zone;
 vector<int> union_zone_diff;
 vector<vector<int>> ini_zone;
-
+vector<vector<string>> ini_zones;
+vector<vector<string>> final_zones;
 
 struct net {
 	vector<int> indexes;
@@ -61,6 +62,9 @@ string f(vector<string>);
 string g(vector<string>, string);
 vector<string> zoneConvertToString(string index);
 vector<string> zoneConvertToStringFinal(string index); //Because we're lazy
+void zonesToString();
+void updateVCG(string a, string b);
+void updateZones(string, string,int);
 
 
 
@@ -83,6 +87,7 @@ int main(int argc, char* argv[])
 	Zone_Sort();
 	Zone_union();
 	Zone_diff_union();
+	zonesToString();
 
 	return 0;
 }
@@ -96,10 +101,13 @@ void Merge() {
 	vector<string> L,R,zoneHold;
 	string m, n;
 	for (size_t i = 0; i < zone.size() - 1; i++) {
-		zoneHold = zoneConvertToString(to_string(i));
-		R = zoneConvertToStringFinal(to_string(i + 1));
+		zoneHold = final_zones[i];
+		R = ini_zones[i+1];
 		L.insert(L.end(), zoneHold.begin(), zoneHold.end());
 		n = g(L, (m = f(R)));
+
+		updateVCG(n, m);
+		updateZones(n, m);
 	}
 }
 
@@ -150,6 +158,107 @@ vector<string> zoneConvertToStringFinal(string index) {
 		ret.push_back(to_string(final_zone[stoi(index)][i]));
 	}
 	return ret;
+}
+
+void zonesToString() {
+	for (size_t i = 0; i < ini_zone.size(); i++) {
+		ini_zones.push_back(zoneConvertToString(to_string(i)));
+	}
+
+	for (size_t i = 0; i < final_zone.size(); i++) {
+		final_zones.push_back(zoneConvertToStringFinal(to_string(i)));
+	}
+}
+
+void updateVCG(string a, string b) {
+	vector<string> newdesc, newpred;
+	for (size_t i = 0; i < allVCG.size(); i++) {
+		newdesc.clear();
+		newpred.clear();
+		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a) != allVCG[i]->decendents.end())
+		{
+			newdesc.insert(newdesc.end(), allVCG[VCGexists(a)]->decendents.begin(), allVCG[VCGexists(a)]->decendents.end());
+			allVCG[i]->decendents.erase(remove_if(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a), allVCG[i]->decendents.end());
+			
+		}
+		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b) != allVCG[i]->decendents.end())
+		{
+			newdesc.insert(newdesc.end(), allVCG[VCGexists(b)]->decendents.begin(), allVCG[VCGexists(b)]->decendents.end());
+			allVCG[i]->decendents.erase(remove_if(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b), allVCG[i]->decendents.end());
+
+		}
+
+		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a) != allVCG[i]->predecessors.end())
+		{
+			newpred.insert(newpred.end(), allVCG[VCGexists(a)]->predecessors.begin(), allVCG[VCGexists(a)]->predecessors.end());
+			allVCG[i]->predecessors.erase(remove_if(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a), allVCG[i]->predecessors.end());
+		}
+		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b) != allVCG[i]->predecessors.end())
+		{
+			newpred.insert(newpred.end(), allVCG[VCGexists(b)]->predecessors.begin(), allVCG[VCGexists(b)]->predecessors.end());
+			allVCG[i]->predecessors.erase(remove_if(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b), allVCG[i]->predecessors.end());
+		}
+
+		VCG *combine = new VCG();
+		combine->decendents = newdesc;
+		combine->predecessors = newpred;
+		combine->netid = a + "," + b;
+		combine->distanceToSink = max(allVCG[VCGexists(a)]->distanceToSink, allVCG[VCGexists(b)]->distanceToSink);
+		combine->distanceToSource = max(allVCG[VCGexists(a)]->distanceToSource, allVCG[VCGexists(b)]->distanceToSource);
+
+		allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(a)]), allVCG.end());
+		allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(b)]), allVCG.end());
+		allVCG.push_back(combine);
+	}
+}
+
+void updateZones(string a, string b) {
+	vector<string>::iterator it1, it2;
+	int ind1, ind2, i1, i2;
+	for (size_t i = 0; i < ini_zones.size(); i++) {
+			if ((it1 = find(ini_zones[i].begin(), ini_zones[i].end(), a)) != ini_zones[i].end())
+			{
+				ind1 = it1 - ini_zones[i].begin();
+				ini_zones[i].erase(ini_zones[i].begin() + ind1);
+				i1 = i;
+
+			}
+			if ((it2 = find(ini_zones[i].begin(), ini_zones[i].end(), b)) != ini_zones[i].end())
+			{
+				ind2 = it2 - ini_zones[i].begin();
+				ini_zones[i].erase(ini_zones[i].begin() + ind2);
+				i2 = i;
+			}
+	}
+
+	if (ind1 > ind2) {
+		ini_zones[i2].insert(ini_zones[i2].begin() + ind2, a + "," + b);
+	}
+	else {
+		ini_zones[i1].insert(ini_zones[i1].begin() + ind1, a + "," + b);
+	}
+
+	for (size_t i = 0; i < final_zones.size(); i++) {
+		if ((it1 = find(final_zones[i].begin(), final_zones[i].end(), a)) != final_zones[i].end())
+		{
+			ind1 = it1 - final_zones[i].begin();
+			final_zones[i].erase(final_zones[i].begin() + ind1);
+			i1 = i;
+		}
+		if ((it2 = find(final_zones[i].begin(), final_zones[i].end(), b)) != final_zones[i].end())
+		{
+			ind2 = it2 - final_zones[i].begin();
+			final_zones[i].erase(final_zones[i].begin() + ind2);
+			i2 = i;
+		}
+	}
+
+	if (ind1 < ind2) {
+		final_zones[i2].insert(final_zones[i2].begin() + ind2, a + "," + b);
+	}
+	else {
+		final_zones[i1].insert(final_zones[i1].begin() + ind1, a + "," + b);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////
