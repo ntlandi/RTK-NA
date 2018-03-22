@@ -57,14 +57,14 @@ void sourceAndSink();
 void findDistance();
 void distFromSource(string, int);
 void distFromSink(string, int);
-void Merge();
+int Merge();
 string f(vector<string>);
 string g(vector<string>, string);
 vector<string> zoneConvertToString(string index);
 vector<string> zoneConvertToStringFinal(string index); //Because we're lazy
 void zonesToString();
 void updateVCG(string a, string b);
-void updateZones(string, string,int);
+void updateZones(string, string);
 
 
 
@@ -89,6 +89,7 @@ int main(int argc, char* argv[])
 	Zone_diff_union();
 	zonesToString();
 
+	while (Merge() > 0);
 	return 0;
 }
 
@@ -97,18 +98,28 @@ int main(int argc, char* argv[])
 //                             Merging 								 //
 ///////////////////////////////////////////////////////////////////////
 
-void Merge() {
+int Merge() {
 	vector<string> L,R,zoneHold;
 	string m, n;
+	int counter = 0;
 	for (size_t i = 0; i < zone.size() - 1; i++) {
 		zoneHold = final_zones[i];
 		R = ini_zones[i+1];
 		L.insert(L.end(), zoneHold.begin(), zoneHold.end());
-		n = g(L, (m = f(R)));
+		if (!R.empty())
+		{
+			n = g(L, (m = f(R)));
 
-		updateVCG(n, m);
-		updateZones(n, m);
+			updateVCG(n, m);
+			updateZones(n, m);
+
+			L.erase(remove(L.begin(), L.end(), n), L.end());
+			L.push_back((n + "," + m));
+			counter++;
+		}
+
 	}
+	return counter;
 }
 
 string f(vector<string> Q) {
@@ -172,44 +183,61 @@ void zonesToString() {
 
 void updateVCG(string a, string b) {
 	vector<string> newdesc, newpred;
+	
 	for (size_t i = 0; i < allVCG.size(); i++) {
-		newdesc.clear();
-		newpred.clear();
 		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a) != allVCG[i]->decendents.end())
 		{
-			newdesc.insert(newdesc.end(), allVCG[VCGexists(a)]->decendents.begin(), allVCG[VCGexists(a)]->decendents.end());
-			allVCG[i]->decendents.erase(remove_if(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a), allVCG[i]->decendents.end());
 			
+			newdesc.insert(newdesc.end(), allVCG[VCGexists(a)]->decendents.begin(), allVCG[VCGexists(a)]->decendents.end());
+			allVCG[i]->decendents.erase(remove(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a), allVCG[i]->decendents.end());
+			if (!(find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a + "," + b) != allVCG[i]->decendents.end())) {
+				allVCG[i]->decendents.push_back(a + "," + b);
+			}
 		}
 		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b) != allVCG[i]->decendents.end())
 		{
+			
 			newdesc.insert(newdesc.end(), allVCG[VCGexists(b)]->decendents.begin(), allVCG[VCGexists(b)]->decendents.end());
-			allVCG[i]->decendents.erase(remove_if(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b), allVCG[i]->decendents.end());
-
+			allVCG[i]->decendents.erase(remove(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b), allVCG[i]->decendents.end());
+			if (!(find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a + "," + b) != allVCG[i]->decendents.end())) {
+				allVCG[i]->decendents.push_back(a + "," + b);
+			}
 		}
-
 		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a) != allVCG[i]->predecessors.end())
 		{
 			newpred.insert(newpred.end(), allVCG[VCGexists(a)]->predecessors.begin(), allVCG[VCGexists(a)]->predecessors.end());
-			allVCG[i]->predecessors.erase(remove_if(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a), allVCG[i]->predecessors.end());
+			
+			allVCG[i]->predecessors.erase(remove(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a), allVCG[i]->predecessors.end());
+			if (!(find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a + "," + b) != allVCG[i]->predecessors.end())) {
+				allVCG[i]->predecessors.push_back(a + "," + b);
+			}
 		}
 		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b) != allVCG[i]->predecessors.end())
 		{
 			newpred.insert(newpred.end(), allVCG[VCGexists(b)]->predecessors.begin(), allVCG[VCGexists(b)]->predecessors.end());
-			allVCG[i]->predecessors.erase(remove_if(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b), allVCG[i]->predecessors.end());
+			allVCG[i]->predecessors.erase(remove(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b), allVCG[i]->predecessors.end());
+			if (!(find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a + "," + b) != allVCG[i]->predecessors.end())) {
+				allVCG[i]->predecessors.push_back(a + "," + b);
+			}
 		}
-
-		VCG *combine = new VCG();
-		combine->decendents = newdesc;
-		combine->predecessors = newpred;
-		combine->netid = a + "," + b;
-		combine->distanceToSink = max(allVCG[VCGexists(a)]->distanceToSink, allVCG[VCGexists(b)]->distanceToSink);
-		combine->distanceToSource = max(allVCG[VCGexists(a)]->distanceToSource, allVCG[VCGexists(b)]->distanceToSource);
-
-		allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(a)]), allVCG.end());
-		allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(b)]), allVCG.end());
-		allVCG.push_back(combine);
+		
 	}
+
+	sort(newdesc.begin(), newdesc.end());
+	sort(newpred.begin(), newpred.end());
+	newdesc.erase(unique(newdesc.begin(), newdesc.end()), newdesc.end());
+	newpred.erase(unique(newpred.begin(), newpred.end()), newpred.end());
+
+	VCG *combine = new VCG();
+	combine->decendents = newdesc;
+	combine->predecessors = newpred;
+	combine->netid = a + "," + b;
+	combine->distanceToSink = max(allVCG[VCGexists(a)]->distanceToSink, allVCG[VCGexists(b)]->distanceToSink);
+	combine->distanceToSource = max(allVCG[VCGexists(a)]->distanceToSource, allVCG[VCGexists(b)]->distanceToSource);
+
+	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(a)]), allVCG.end());
+	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(b)]), allVCG.end());
+	allVCG.push_back(combine);
 }
 
 void updateZones(string a, string b) {
@@ -231,7 +259,7 @@ void updateZones(string a, string b) {
 			}
 	}
 
-	if (ind1 > ind2) {
+	if (i1 > i2) {
 		ini_zones[i2].insert(ini_zones[i2].begin() + ind2, a + "," + b);
 	}
 	else {
@@ -253,7 +281,7 @@ void updateZones(string a, string b) {
 		}
 	}
 
-	if (ind1 < ind2) {
+	if (i1 < i2) {
 		final_zones[i2].insert(final_zones[i2].begin() + ind2, a + "," + b);
 	}
 	else {
@@ -444,21 +472,22 @@ int VCGexists(string netid) {
 //Removes transient edges with low effort O(n3)
 void transientRemoval() {
 	vector<string> possibleRemove;
-
+	int count = 0;
 
 	//remove transient edges
 	//iterate through all VCG
 	for (size_t i = 0; i < allVCG.size(); i++) {
 		possibleRemove = allVCG[i]->decendents;
 		//iterate through decendents
-		for (size_t j = 0; j < possibleRemove.size(); j++) {
+		for (size_t j = 0; j < possibleRemove.size() - count; j++) {
 			//get list of decendents of decendents
 			VCG *check = allVCG[VCGexists(possibleRemove[j])];
 			//remove common decendents from tallest ancestor
 			for (size_t k = 0; k < check->decendents.size(); k++) {
 				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->decendents[k]), possibleRemove.end());
+				count++;
 			}
-		}
+		} 
 		allVCG[i]->decendents = possibleRemove;
 	}
 
