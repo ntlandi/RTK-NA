@@ -2,7 +2,7 @@
 //
 
 #include "stdafx.h"
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
 #include <algorithm>
 #include <string>
@@ -10,23 +10,19 @@
 #include <fstream>
 #include <iostream>
 #include <set>
+#include <ctime>
+#include <sstream>
+
+
 
 using namespace std;
-vector<int> top;
-vector<int> bot;
-vector<vector<int>> zone;
-vector<vector<int>> final_zone;
-vector<int> union_zone;
-vector<int> union_zone_diff;
-vector<vector<int>> ini_zone;
-vector<vector<string>> ini_zones;
-vector<vector<string>> final_zones;
 
 struct net {
 	vector<int> indexes;
 	vector<bool> directions;
 	int netnum;
-
+	int doglegs = 0;
+	int counter = 0;
 	int startind, endind;
 };
 
@@ -37,19 +33,32 @@ struct VCG {
 	int distanceToSink = 0;
 };
 
-bool sortNet(const net *a, const net *b);
 
+vector<int> top;
+vector<int> bot;
+vector<vector<int>> zone;
+vector<vector<int>> final_zone;
+vector<int> union_zone;
+vector<int> union_zone_diff;
+vector<vector<int>> ini_zone;
+vector<vector<string>> zones;
+vector<vector<string>> ini_zones;
+vector<vector<string>> final_zones;
 net * first;
 vector<net*> netlist;
-vector<VCG*> allVCG, source, sink, dVec;
+vector<VCG*> allVCG, source, sink;
+bool dog;
+vector<string> tops, bots;
+vector<int> zoneEnd;
 
+#pragma region methods
 void parse(string);
 void arraytonet();
 int findExistingNet(int);
 void makeVCG();
 void Zoning();
 int VCGexists(string);
-void transientRemoval(); 
+void transientRemoval();
 void Zone_Sort();
 void Zone_union();
 void Zone_diff_union();
@@ -65,31 +74,59 @@ vector<string> zoneConvertToStringFinal(string index); //Because we're lazy
 void zonesToString();
 void updateVCG(string a, string b);
 void updateZones(string, string);
+bool sortNet(const net *a, const net *b);
+void zoneDogleg();
+vector<string> zoneConvertToStringAll(string);
+vector<int> zoneEnds();
+void trackToString();
+void printToFile();
+#pragma endregion
 
 
 
 int main(int argc, char* argv[])
 {
-	//VCG 
-	string filepath;
+	string filepath, dog1;
 	getline(cin, filepath);
+
+	cout << "\nDoglegging? : \n";
+	getline(cin, dog1);
+	if (dog1 == "y" || dog1 == "Y" || dog1 == "1") {
+		dog = true;
+	}
+	else {
+		dog = false;
+	}
+
+	clock_t start = clock();
 	parse(filepath);
 	arraytonet();
-	makeVCG();
-	findDistance();
-
 
 	//Zoning Code
-	
-	zone = vector<vector<int>>(static_cast<int>(top.size()), vector<int>(5, 0));
+
+	zone = vector<vector<int>>(static_cast<int>(top.size()), vector<int>(20, 0));
 	Zoning();
 	final_zone.resize(static_cast<int>(zone.size()));
 	Zone_Sort();
 	Zone_union();
 	Zone_diff_union();
 	zonesToString();
+	if (dog) {
+		zoneDogleg();
+	}
+	zoneEnd = zoneEnds();
+
+	//VCG 
+	makeVCG();
+	findDistance();
+
+
+	
 
 	while (Merge() > 0);
+
+	printf("\n\n%d", clock() - start);
+	printToFile();
 	return 0;
 }
 
@@ -98,13 +135,14 @@ int main(int argc, char* argv[])
 //                             Merging 								 //
 ///////////////////////////////////////////////////////////////////////
 
+#pragma region Merging
 int Merge() {
-	vector<string> L,R,zoneHold;
+	vector<string> L, R, zoneHold;
 	string m, n;
 	int counter = 0;
 	for (size_t i = 0; i < zone.size() - 1; i++) {
 		zoneHold = final_zones[i];
-		R = ini_zones[i+1];
+		R = ini_zones[i + 1];
 		L.insert(L.end(), zoneHold.begin(), zoneHold.end());
 		if (!R.empty())
 		{
@@ -116,6 +154,9 @@ int Merge() {
 			L.erase(remove(L.begin(), L.end(), n), L.end());
 			L.push_back((n + "," + m));
 			counter++;
+
+			sourceAndSink();
+			findDistance();
 		}
 
 	}
@@ -171,6 +212,14 @@ vector<string> zoneConvertToStringFinal(string index) {
 	return ret;
 }
 
+vector<string> zoneConvertToStringAll(string index) {
+	vector<string> ret;
+	for (size_t i = 0; i < zone[stoi(index)].size(); i++) {
+		ret.push_back(to_string(zone[stoi(index)][i]));
+	}
+	return ret;
+}
+
 void zonesToString() {
 	for (size_t i = 0; i < ini_zone.size(); i++) {
 		ini_zones.push_back(zoneConvertToString(to_string(i)));
@@ -179,40 +228,41 @@ void zonesToString() {
 	for (size_t i = 0; i < final_zone.size(); i++) {
 		final_zones.push_back(zoneConvertToStringFinal(to_string(i)));
 	}
+
+	for (size_t i = 0; i < zone.size(); i++) {
+		zones.push_back(zoneConvertToStringAll(to_string(i)));
+	}
 }
 
 void updateVCG(string a, string b) {
 	vector<string> newdesc, newpred;
-	
+
 	for (size_t i = 0; i < allVCG.size(); i++) {
-		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a) != allVCG[i]->decendents.end())
+		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a) != allVCG[i]->decendents.end() && allVCG[i]->decendents.size() > 0)
 		{
-			
 			newdesc.insert(newdesc.end(), allVCG[VCGexists(a)]->decendents.begin(), allVCG[VCGexists(a)]->decendents.end());
 			allVCG[i]->decendents.erase(remove(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a), allVCG[i]->decendents.end());
 			if (!(find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a + "," + b) != allVCG[i]->decendents.end())) {
 				allVCG[i]->decendents.push_back(a + "," + b);
 			}
 		}
-		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b) != allVCG[i]->decendents.end())
+		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b) != allVCG[i]->decendents.end() && allVCG[i]->decendents.size() > 0)
 		{
-			
 			newdesc.insert(newdesc.end(), allVCG[VCGexists(b)]->decendents.begin(), allVCG[VCGexists(b)]->decendents.end());
 			allVCG[i]->decendents.erase(remove(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b), allVCG[i]->decendents.end());
 			if (!(find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a + "," + b) != allVCG[i]->decendents.end())) {
 				allVCG[i]->decendents.push_back(a + "," + b);
 			}
 		}
-		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a) != allVCG[i]->predecessors.end())
+		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0)
 		{
 			newpred.insert(newpred.end(), allVCG[VCGexists(a)]->predecessors.begin(), allVCG[VCGexists(a)]->predecessors.end());
-			
 			allVCG[i]->predecessors.erase(remove(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a), allVCG[i]->predecessors.end());
 			if (!(find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a + "," + b) != allVCG[i]->predecessors.end())) {
 				allVCG[i]->predecessors.push_back(a + "," + b);
 			}
 		}
-		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b) != allVCG[i]->predecessors.end())
+		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0)
 		{
 			newpred.insert(newpred.end(), allVCG[VCGexists(b)]->predecessors.begin(), allVCG[VCGexists(b)]->predecessors.end());
 			allVCG[i]->predecessors.erase(remove(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b), allVCG[i]->predecessors.end());
@@ -220,7 +270,7 @@ void updateVCG(string a, string b) {
 				allVCG[i]->predecessors.push_back(a + "," + b);
 			}
 		}
-		
+
 	}
 
 	sort(newdesc.begin(), newdesc.end());
@@ -244,19 +294,19 @@ void updateZones(string a, string b) {
 	vector<string>::iterator it1, it2;
 	int ind1, ind2, i1, i2;
 	for (size_t i = 0; i < ini_zones.size(); i++) {
-			if ((it1 = find(ini_zones[i].begin(), ini_zones[i].end(), a)) != ini_zones[i].end())
-			{
-				ind1 = it1 - ini_zones[i].begin();
-				ini_zones[i].erase(ini_zones[i].begin() + ind1);
-				i1 = i;
+		if ((it1 = find(ini_zones[i].begin(), ini_zones[i].end(), a)) != ini_zones[i].end())
+		{
+			ind1 = it1 - ini_zones[i].begin();
+			ini_zones[i].erase(ini_zones[i].begin() + ind1);
+			i1 = i;
 
-			}
-			if ((it2 = find(ini_zones[i].begin(), ini_zones[i].end(), b)) != ini_zones[i].end())
-			{
-				ind2 = it2 - ini_zones[i].begin();
-				ini_zones[i].erase(ini_zones[i].begin() + ind2);
-				i2 = i;
-			}
+		}
+		if ((it2 = find(ini_zones[i].begin(), ini_zones[i].end(), b)) != ini_zones[i].end())
+		{
+			ind2 = it2 - ini_zones[i].begin();
+			ini_zones[i].erase(ini_zones[i].begin() + ind2);
+			i2 = i;
+		}
 	}
 
 	if (i1 > i2) {
@@ -288,12 +338,15 @@ void updateZones(string a, string b) {
 		final_zones[i1].insert(final_zones[i1].begin() + ind1, a + "," + b);
 	}
 }
+#pragma endregion
+
 
 ///////////////////////////////////////////////////////////////////////
 //                             Zoning 								 //
 ///////////////////////////////////////////////////////////////////////
 
 //creates zones for future use
+#pragma region Zoning
 void Zoning() {
 	//Zoning Code
 	int maxnum = 0;
@@ -347,6 +400,7 @@ void Zoning() {
 		}
 	}
 
+
 }
 
 void Zone_union() {
@@ -394,7 +448,7 @@ void Zone_Sort() {
 void Zone_diff_union() {
 	set<int> all1;
 	vector<int>::iterator it2;
-	vector<int> temp_zone_union(10);
+	vector<int> temp_zone_union(2 * netlist.size());
 
 	for (int i = 0; i < final_zone.size(); i++) {
 		all1.insert(final_zone[i].begin(), final_zone[i].end());
@@ -407,49 +461,66 @@ void Zone_diff_union() {
 	final_zone[static_cast<int>(zone.size()) - 1] = temp_zone_union;
 }
 
+void zoneDogleg() {
+	char letter;
+	string s;
+	for (size_t i = 0; i < netlist.size(); i++) {
+		letter = 'A';
+		for (size_t j = 0; j < zones.size(); j++) {
+			if (find(zones[j].begin(), zones[j].end(), to_string(netlist[i]->netnum)) != zones[j].end()) {
+				stringstream ss;
+				ss << letter;
+				ss >> s;
+				replace(zones[j].begin(), zones[j].end(), to_string(netlist[i]->netnum), to_string(netlist[i]->netnum) + s);
+				letter++;
+				netlist[i]->doglegs++;
+			}
+		}
+
+	}
+
+	ini_zones = zones;
+	final_zones = zones;
+}
+#pragma endregion
+
+
 ///////////////////////////////////////////////////////////////////////
 //                         VCG construction							 //
 ///////////////////////////////////////////////////////////////////////
 
-//Constructs the original VCG graph
+#pragma region VCG
+				//Constructs the original VCG graph
 void makeVCG() {
-	//determine 
-	for (size_t i = 0; i < top.size(); i++) {
-		int at = VCGexists(to_string(top[i]));
+	trackToString();
+	//top
+	for (size_t i = 0; i < tops.size(); i++) {
+		int at = VCGexists((tops[i]));
 		//VCG exists
-		if (at != -1) {
-			allVCG[at]->decendents.push_back(to_string(bot[i]));
+		if (at != -1 && bot[i] != 0) {
+			allVCG[at]->decendents.push_back((bots[i]));
 		}
 		//VCG does not exist
 		else if (at == -1 && top[i] != 0 && bot[i] != 0) {
 			VCG *n = new VCG;
-			n->netid = to_string(top[i]);
-			n->decendents.push_back(to_string(bot[i]));
+			n->netid = (tops[i]);
+			n->decendents.push_back((bots[i]));
 			allVCG.push_back(n);
 		}
 	}
-
-	for (size_t i = 0; i < bot.size(); i++) {
-		int at = VCGexists(to_string(bot[i]));
+	//bottom
+	for (size_t i = 0; i < bots.size(); i++) {
+		int at = VCGexists((bots[i]));
 		//VCG exists
-		if (at != -1) {
-			allVCG[at]->predecessors.push_back(to_string(top[i]));
+		if (at != -1 && top[i] != 0) {
+			allVCG[at]->predecessors.push_back((tops[i]));
 		}
 		//VCG does not exist
 		else if (at == -1 && top[i] != 0 && bot[i] != 0) {
 			VCG *n = new VCG;
-			n->netid = to_string(bot[i]);
-			n->predecessors.push_back(to_string(top[i]));
+			n->netid = (bots[i]);
+			n->predecessors.push_back((tops[i]));
 			allVCG.push_back(n);
-		}
-	}
-
-	for (size_t i = 1; i < netlist.size(); i++) {
-		if (VCGexists(to_string(i)) == -1) {
-			VCG *n = new VCG();
-			n->netid = i;
-			allVCG.push_back(n);
-			sink.push_back(n);
 		}
 	}
 
@@ -472,22 +543,20 @@ int VCGexists(string netid) {
 //Removes transient edges with low effort O(n3)
 void transientRemoval() {
 	vector<string> possibleRemove;
-	int count = 0;
 
 	//remove transient edges
 	//iterate through all VCG
 	for (size_t i = 0; i < allVCG.size(); i++) {
 		possibleRemove = allVCG[i]->decendents;
 		//iterate through decendents
-		for (size_t j = 0; j < possibleRemove.size() - count; j++) {
+		for (size_t j = 0; j < possibleRemove.size(); j++) {
 			//get list of decendents of decendents
 			VCG *check = allVCG[VCGexists(possibleRemove[j])];
 			//remove common decendents from tallest ancestor
 			for (size_t k = 0; k < check->decendents.size(); k++) {
 				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->decendents[k]), possibleRemove.end());
-				count++;
 			}
-		} 
+		}
 		allVCG[i]->decendents = possibleRemove;
 	}
 
@@ -507,6 +576,8 @@ void transientRemoval() {
 }
 
 void sourceAndSink() {
+	source.clear();
+	sink.clear();
 	for (size_t i = 0; i < allVCG.size(); i++) {
 		if (allVCG[i]->decendents.size() == 0) {
 			sink.push_back(allVCG[i]);
@@ -523,7 +594,7 @@ void findDistance() {
 	}
 
 	for (size_t i = 0; i < sink.size(); i++) {
-		distFromSink(sink[i]->netid,0);
+		distFromSink(sink[i]->netid, 0);
 	}
 }
 
@@ -545,11 +616,109 @@ void distFromSink(string netid, int counter) {
 	}
 }
 
+int getNetlistInd(int index) {
+	for (size_t i = 0; i < netlist.size(); i++) {
+		if (index == netlist[i]->netnum) {
+			return i;
+		}
+	}
+}
+
+vector<int> zoneEnds() {
+	vector<int> ret;
+	int maxEnd = 0;
+	for (size_t i = 0; i < final_zone.size(); i++) {
+		for (size_t j = 0; j < final_zone[i].size(); j++)
+		{
+			maxEnd = (maxEnd < netlist[getNetlistInd(final_zone[i][j])]->endind) ? netlist[getNetlistInd(final_zone[i][j])]->endind : maxEnd;
+		}
+		ret.push_back(maxEnd);
+		maxEnd = 0;
+	}
+
+	return ret;
+}
+
+void trackToString() {
+	if (!dog)
+	{
+		for (size_t i = 0; i < top.size(); i++) {
+			tops.push_back(to_string(top[i]));
+		}
+		for (size_t i = 0; i < bot.size(); i++) {
+			bots.push_back(to_string(bot[i]));
+		}
+	}
+	else {
+		/*vector<int> seen(netlist.size(), 0);
+		vector<int> sameZone;
+		int counter = 0;
+		for (size_t i = 0; i < top.size(); i++) {
+			if (i > zoneEnd[counter]) {
+				counter++;
+				for (size_t j = 0; j < sameZone.size(); j++) {
+					seen[sameZone[j] - 1]++;
+				}
+				sameZone.clear();
+			}
+			if (top[i] != 0)
+			{
+				stringstream ss;
+				ss << (char)('A' + (char)(seen[top[i] - 1]));
+				string s;
+				ss >> s;
+				tops.push_back(to_string(top[i]) + s);
+				if (find(sameZone.begin(), sameZone.end(), top[i]) == sameZone.end())
+				{
+					sameZone.push_back(top[i]);
+				}
+			}
+			else {
+				tops.push_back("0");
+			}
+		}
+
+		counter = 0;
+		sameZone.clear();
+		seen = vector<int>(netlist.size(), 0);
+		for (size_t i = 0; i < bot.size(); i++) {
+			if (i > zoneEnd[counter]) {
+				counter++;
+				for (size_t j = 0; j < sameZone.size(); j++) {
+					seen[sameZone[j] - 1]++;
+				}
+				sameZone.clear();
+			}
+			if (bot[i] != 0)
+			{
+				stringstream ss;
+				ss << (char)('A' + (char)(seen[bot[i] - 1]));
+				string s;
+				ss >> s;
+				bots.push_back(to_string(bot[i]) + s);
+				if (find(sameZone.begin(), sameZone.end(), bot[i]) == sameZone.end())
+				{
+					sameZone.push_back(bot[i]);
+				}
+			}
+			else {
+				bots.push_back("0");
+			}
+		}
+		counter = 0;
+	*/
+
+	}
+}
+
+#pragma endregion
+
 ///////////////////////////////////////////////////////////////////////
 //                             Parsing								 //
 ///////////////////////////////////////////////////////////////////////
 //parses file into vector of ints to be used later for VCG creation
 //and zoning
+#pragma region Parsing
 void parse(string fileloc) {
 	ifstream file;
 	file.open(fileloc);
@@ -649,3 +818,73 @@ int findExistingNet(int net) {
 
 	return -1;
 }
+#pragma endregion
+
+
+///////////////////////////////////////////////////////////////////////
+//                             Parsing								 //
+///////////////////////////////////////////////////////////////////////
+
+vector<string> VCGParse(string s) {
+	vector<string> nets;
+	int index = 0, previndex = 0;
+	while (index < s.length()) {
+		index = s.find(",", (size_t)previndex);
+		nets.push_back((s.substr(previndex, index - previndex)));
+		previndex = index + 1;
+	}
+
+
+	return nets;
+}
+
+string vectorToString(vector<int> s) {
+	string p;
+	for (size_t i = 0; i < s.size(); i++) {
+		p += to_string(s[i]) + " ";
+	}
+
+	return p;
+}
+
+string vectorToString(vector<bool> s) {
+	string p;
+	for (size_t i = 0; i < s.size(); i++) {
+		p += s[i] ? "u" : "d";
+	}
+	return p;
+}
+
+bool sortVCG(const VCG *a, const VCG *b) {
+	return a->distanceToSource < b->distanceToSource;
+}
+
+void printToFile() {
+	vector<string> nets;
+	string file = "RTK-NA.out";
+	ofstream f;
+	f.open(file);
+	int netind;
+
+	sort(allVCG.begin(), allVCG.end(), sortVCG);
+
+	for(size_t i = 0; i < allVCG.size(); i++) {
+		string s = allVCG[i]->netid;
+
+		nets = VCGParse(s);
+
+		for (size_t j = 0; j < nets.size(); j++) {
+			netind = getNetlistInd(stoi(nets[j]));
+
+			f << (to_string(netlist[netind]->netnum) + " " );
+			f << ("s " + to_string(netlist[netind]->startind) + " " );
+			f << ("e " + to_string(netlist[netind]->endind)+ " ");
+			f << ("i " + vectorToString(netlist[netind]->indexes));
+			f << ("d " + vectorToString(netlist[netind]->directions) + " ");
+			f << "\n";
+		}
+		f << "|\n";
+	}
+	f.close();
+}
+
