@@ -88,6 +88,8 @@ void dogleg(vector<string> *, vector<string>*);
 void updateVCGDog(int, int, VCG*);
 void processInput(GLFWwindow *);
 void framebuffer_size_callback(GLFWwindow* , int , int);
+string findExistingNetDog(string );
+void arraytonetDog();
 #pragma endregion
 
 
@@ -110,6 +112,10 @@ int main(int argc, char* argv[])
 	parse(filepath);
 	arraytonet();
 
+	//VCG 
+	makeVCG();
+	arraytonetDog();
+
 	//Zoning Code
 
 	zone = vector<vector<string>>(static_cast<int>(top.size()), vector<string>(20, "0"));
@@ -120,10 +126,7 @@ int main(int argc, char* argv[])
 	Zone_diff_union();
 	//zonesToString();
 	//zoneEnd = zoneEnds();      //Pending fix if needed
- 
-	//VCG 
-	makeVCG();
-	
+ 	
 
 	//while (Merge() > 0);
 
@@ -353,7 +356,7 @@ void Zoning() {
 	//Zoning Code
 		
 	vector< vector<string> > col;
-	for (size_t i1 = 0; i1 < top.size(); i1++) {
+	for (size_t i1 = 0; i1 < tops.size(); i1++) {
 		vector<string> row; // Create an empty row
 		for (size_t j1 = 0; j1 < allVCG.size(); j1++) {
 			if (i1 <= allVCG[j1]->endind && i1 >= allVCG[j1]->startind) {
@@ -367,7 +370,7 @@ void Zoning() {
 	int p = 0;
 
 
-	for (int k1 = 1; k1 < static_cast<int>(top.size()) - 1; k1++) {
+	for (int k1 = 1; k1 < static_cast<int>(tops.size()) - 1; k1++) {
 		//if (k1== static_cast<int>(top.size()-1) {
 
 		if ((includes(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end())) || (includes(col[k1 + 1].begin(), col[k1 + 1].end(), col[k1].begin(), col[k1].end()))) {
@@ -812,6 +815,62 @@ void arraytonet() {
 	sort(netlist.begin(), netlist.end(), sortNet);
 }
 
+void arraytonetDog() {
+	string previndex;
+	//top part of input
+	for (int i = 0; i < tops.size(); i++) {
+		VCG *next = new VCG;
+		string nextnet = tops.at(i);
+		string net = findExistingNetDog(nextnet);
+
+		if (nextnet.compare("0")) {
+			continue;
+		}
+		else if (!(net.compare("-1"))) {
+			allVCG[VCGexistsDog(net)]->indexes.push_back(i);
+			allVCG[VCGexistsDog(net)]->directions.push_back(true);
+			allVCG[VCGexistsDog(net)]->endind = i;
+		}
+		else {
+			next->startind = i;
+			next->directions.push_back(true);
+			next->endind = i;
+			next->indexes.push_back(i);
+			next->netid = nextnet;
+			allVCG.push_back(next);
+		}
+	}
+	//bottom part of input
+	for (int i = 0; i < bot.size(); i++) {
+		VCG *next = new VCG;
+		string nextnet = tops.at(i);
+		string net = findExistingNetDog(nextnet);
+
+		if (nextnet.compare("0")) {
+			continue;
+		}
+		else if (!(net.compare("-1"))) {
+			allVCG[VCGexistsDog(net)]->indexes.push_back(i);
+			allVCG[VCGexistsDog(net)]->directions.push_back(true);
+			if (allVCG[VCGexistsDog(net)]->startind > i) {
+				allVCG[VCGexistsDog(net)]->startind = i;
+			}
+			if (allVCG[VCGexistsDog(net)]->endind < i) {
+				allVCG[VCGexistsDog(net)]->endind = i;
+			}
+		}
+		else {
+			next->startind = i;
+			next->directions.push_back(false);
+			next->endind = i;
+			next->indexes.push_back(i);
+			next->netid = nextnet;
+			allVCG.push_back(next);
+		}
+	}
+	
+}
+
 //accesory function to sort the netlist by netnum
 bool sortNet(const net *a, const net *b) {
 	return a->netnum < b->netnum;
@@ -827,6 +886,16 @@ int findExistingNet(int net) {
 	}
 
 	return -1;
+}
+string findExistingNetDog(string net) {
+
+	for (int i = 0; i < allVCG.size(); i++) {
+		if (allVCG[i]->netid.compare(net)) {
+			return allVCG[i]->netid;
+		}
+	}
+
+	return "-1";
 }
 #pragma endregion
 
