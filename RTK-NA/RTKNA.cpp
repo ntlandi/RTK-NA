@@ -15,7 +15,6 @@
 //#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-
 using namespace std;
 
 struct net {
@@ -29,6 +28,7 @@ struct net {
 
 struct VCG {
 	string netid;
+	int startind, endind;
 	string dogid = "";
 	vector<string> decendents, predecessors,dogdesc,dogpred;
 	int distanceToSource = 0;
@@ -41,11 +41,11 @@ struct VCG {
 
 vector<int> top;
 vector<int> bot;
-vector<vector<int>> zone;
-vector<vector<int>> final_zone;
-vector<int> union_zone;
-vector<int> union_zone_diff;
-vector<vector<int>> ini_zone;
+vector<vector<string>> zone;
+vector<vector<string>> final_zone;
+vector<string> union_zone;
+vector<string> union_zone_diff;
+vector<vector<string>> ini_zone;
 vector<vector<string>> zones;
 vector<vector<string>> ini_zones;
 vector<vector<string>> final_zones;
@@ -86,6 +86,10 @@ void trackToString();
 void printToFile();
 void dogleg(vector<string> *, vector<string>*);
 void updateVCGDog(int, int, VCG*);
+void processInput(GLFWwindow *);
+void framebuffer_size_callback(GLFWwindow* , int , int);
+string findExistingNetDog(string );
+void arraytonetDog();
 #pragma endregion
 
 
@@ -108,22 +112,21 @@ int main(int argc, char* argv[])
 	parse(filepath);
 	arraytonet();
 
+	//VCG 
+	makeVCG();
+	arraytonetDog();
+
 	//Zoning Code
 
-	zone = vector<vector<int>>(static_cast<int>(top.size()), vector<int>(20, 0));
+	zone = vector<vector<string>>(static_cast<int>(top.size()), vector<string>(20, "0"));
 	Zoning();
 	final_zone.resize(static_cast<int>(zone.size()));
 	Zone_Sort();
 	Zone_union();
 	Zone_diff_union();
 	//zonesToString();
-	zoneEnd = zoneEnds();
-
-	//VCG 
-	makeVCG();
-
-
-	
+	//zoneEnd = zoneEnds();      //Pending fix if needed
+ 	
 
 	//while (Merge() > 0);
 
@@ -351,33 +354,29 @@ int main(int argc, char* argv[])
 #pragma region Zoning
 void Zoning() {
 	//Zoning Code
-	int maxnum = 0;
-	for (int i = 0; i < static_cast<int>(top.size()); i++) {
-		maxnum = (top[i] > maxnum) ? top[i] : maxnum;
-		maxnum = (bot[i] > maxnum) ? bot[i] : maxnum;
-	}
-
-	vector< vector<int> > col;
-	for (int i1 = 0; i1 < static_cast<int>(top.size()); i1++) {
-		vector<int> row; // Create an empty row
-		for (int j1 = 0; j1 < maxnum; j1++) {
-			if (i1 <= netlist[j1]->endind && i1 >= netlist[j1]->startind) {
-				row.push_back(j1 + 1); // Add an element (column) to the row
+		
+	vector< vector<string> > col;
+	for (size_t i1 = 0; i1 < tops.size(); i1++) {
+		vector<string> row; // Create an empty row
+		for (size_t j1 = 0; j1 < allVCG.size(); j1++) {
+			if (i1 <= allVCG[j1]->endind && i1 >= allVCG[j1]->startind) {
+				row.push_back(allVCG[j1]->netid); // Add an element (column) to the row
 			}
 		}
+		sort(row.begin(),row.end()); // Sort strings 
 		col.push_back(row); // Add the row to the main vector
 	}
 
 	int p = 0;
 
 
-	for (int k1 = 1; k1 < static_cast<int>(top.size()) - 1; k1++) {
+	for (int k1 = 1; k1 < static_cast<int>(tops.size()) - 1; k1++) {
 		//if (k1== static_cast<int>(top.size()-1) {
 
 		if ((includes(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end())) || (includes(col[k1 + 1].begin(), col[k1 + 1].end(), col[k1].begin(), col[k1].end()))) {
 			//cout << "Subset";
-			std::vector<int> temp_colunion(static_cast<int>(col[k1].size()) * 10);
-			std::vector<int>::iterator it;
+			std::vector<string> temp_colunion(static_cast<int>(col[k1].size()) * 10);
+			std::vector<string>::iterator it;
 			it = set_union(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end(), temp_colunion.begin());
 			temp_colunion.resize(it - temp_colunion.begin());
 
@@ -406,33 +405,33 @@ void Zoning() {
 }
 
 void Zone_union() {
-	set<int> all;
+	set<string> all;
 	for (int i = 0; i < zone.size(); i++) {
 		all.insert(zone[i].begin(), zone[i].end());
 	}
-	union_zone = vector<int>(all.begin(), all.end());
+	union_zone = vector<string>(all.begin(), all.end());
 }
 
 
 void Zone_Sort() {
 	final_zone.resize(static_cast<int>(zone.size()));
 	ini_zone.resize(static_cast<int>(zone.size()));
-	vector<int>::iterator it1;
-	vector<int>::iterator it2;
+	vector<string>::iterator it1;
+	vector<string>::iterator it2;
 
-	vector<int> temp_diff_union;
+	vector<string> temp_diff_union;
 
-	vector<int> last_zone(10);
+	vector<string> last_zone(10);
 
 	for (int l1 = 0; l1 < static_cast<int>(zone.size()) - 1; l1++) {
-		vector<int> temp_zone_diff(10);
+		vector<string> temp_zone_diff(10);
 
 		it1 = set_difference(zone[l1].begin(), zone[l1].end(), zone[l1 + 1].begin(), zone[l1 + 1].end(), temp_zone_diff.begin());
 		temp_zone_diff.resize(it1 - temp_zone_diff.begin());
 
 		final_zone[l1] = temp_zone_diff;
 
-		vector<int> temp_zone_diff1(10);
+		vector<string> temp_zone_diff1(10);
 
 		if (l1 == 0) {
 			ini_zone[l1] = zone[l1];
@@ -448,14 +447,14 @@ void Zone_Sort() {
 }
 
 void Zone_diff_union() {
-	set<int> all1;
-	vector<int>::iterator it2;
-	vector<int> temp_zone_union(2 * netlist.size());
+	set<string> all1;
+	vector<string>::iterator it2;
+	vector<string> temp_zone_union(2 * netlist.size());
 
 	for (int i = 0; i < final_zone.size(); i++) {
 		all1.insert(final_zone[i].begin(), final_zone[i].end());
 	}
-	union_zone_diff = vector<int>(all1.begin(), all1.end());
+	union_zone_diff = vector<string>(all1.begin(), all1.end());
 
 	it2 = set_difference(union_zone.begin(), union_zone.end(), union_zone_diff.begin(), union_zone_diff.end(), temp_zone_union.begin());
 	temp_zone_union.resize(it2 - temp_zone_union.begin());
@@ -641,20 +640,20 @@ int getNetlistInd(int index) {
 	}
 }
 
-vector<int> zoneEnds() {
-	vector<int> ret;
-	int maxEnd = 0;
-	for (size_t i = 0; i < final_zone.size(); i++) {
-		for (size_t j = 0; j < final_zone[i].size(); j++)
-		{
-			maxEnd = (maxEnd < netlist[getNetlistInd(final_zone[i][j])]->endind) ? netlist[getNetlistInd(final_zone[i][j])]->endind : maxEnd;
-		}
-		ret.push_back(maxEnd);
-		maxEnd = 0;
-	}
-
-	return ret;
-}
+//vector<int> zoneEnds() {
+//	vector<int> ret;
+//	int maxEnd = 0;
+//	for (size_t i = 0; i < final_zone.size(); i++) {
+//		for (size_t j = 0; j < final_zone[i].size(); j++)
+//		{
+//			maxEnd = (maxEnd < netlist[getNetlistInd(final_zone[i][j])]->endind) ? netlist[getNetlistInd(final_zone[i][j])]->endind : maxEnd;
+//		}
+//		ret.push_back(maxEnd);
+//		maxEnd = 0;
+//	}
+//
+//	return ret;
+//}
 
 void trackToString() {
 	for (size_t i = 0; i < top.size(); i++) {
@@ -757,6 +756,62 @@ void arraytonet() {
 	sort(netlist.begin(), netlist.end(), sortNet);
 }
 
+void arraytonetDog() {
+	string previndex;
+	//top part of input
+	for (int i = 0; i < tops.size(); i++) {
+		VCG *next = new VCG;
+		string nextnet = tops.at(i);
+		string net = findExistingNetDog(nextnet);
+
+		if (nextnet.compare("0")) {
+			continue;
+		}
+		else if (!(net.compare("-1"))) {
+			allVCG[VCGexistsDog(net)]->indexes.push_back(i);
+			allVCG[VCGexistsDog(net)]->directions.push_back(true);
+			allVCG[VCGexistsDog(net)]->endind = i;
+		}
+		else {
+			next->startind = i;
+			next->directions.push_back(true);
+			next->endind = i;
+			next->indexes.push_back(i);
+			next->netid = nextnet;
+			allVCG.push_back(next);
+		}
+	}
+	//bottom part of input
+	for (int i = 0; i < bot.size(); i++) {
+		VCG *next = new VCG;
+		string nextnet = tops.at(i);
+		string net = findExistingNetDog(nextnet);
+
+		if (nextnet.compare("0")) {
+			continue;
+		}
+		else if (!(net.compare("-1"))) {
+			allVCG[VCGexistsDog(net)]->indexes.push_back(i);
+			allVCG[VCGexistsDog(net)]->directions.push_back(true);
+			if (allVCG[VCGexistsDog(net)]->startind > i) {
+				allVCG[VCGexistsDog(net)]->startind = i;
+			}
+			if (allVCG[VCGexistsDog(net)]->endind < i) {
+				allVCG[VCGexistsDog(net)]->endind = i;
+			}
+		}
+		else {
+			next->startind = i;
+			next->directions.push_back(false);
+			next->endind = i;
+			next->indexes.push_back(i);
+			next->netid = nextnet;
+			allVCG.push_back(next);
+		}
+	}
+	
+}
+
 //accesory function to sort the netlist by netnum
 bool sortNet(const net *a, const net *b) {
 	return a->netnum < b->netnum;
@@ -772,6 +827,16 @@ int findExistingNet(int net) {
 	}
 
 	return -1;
+}
+string findExistingNetDog(string net) {
+
+	for (int i = 0; i < allVCG.size(); i++) {
+		if (allVCG[i]->netid.compare(net)) {
+			return allVCG[i]->netid;
+		}
+	}
+
+	return "-1";
 }
 #pragma endregion
 
@@ -1142,177 +1207,177 @@ void printToFile() {
 ///////////////////////////////////////////////////////////////////////
 
 #pragma region OpenGL
-//
-//// settings
-//const unsigned int SCR_WIDTH = 800;
-//const unsigned int SCR_HEIGHT = 600;
-//
-//const char *vertexShaderSource = "#version 330 core\n"
-//"layout (location = 0) in vec3 aPos;\n"
-//"void main()\n"
-//"{\n"
-//"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-//"}\0";
-//const char *fragmentShaderSource = "#version 330 core\n"
-//"out vec4 FragColor;\n"
-//"void main()\n"
-//"{\n"
-//"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-//"}\n\0";
-//
-//int draw(void)
-//{
-//	// glfw: initialize and configure
-//	// ------------------------------
-//	glfwInit();
-//	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-//	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-//	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-//
-//	// glfw window creation
-//	// --------------------
-//	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "YK Routing", NULL, NULL);
-//	if (window == NULL)
-//	{
-//		std::cout << "Failed to create GLFW window" << std::endl;
-//		glfwTerminate();
-//		return -1;
-//	}
-//	glfwMakeContextCurrent(window);
-//	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-//
-//	// glad: load all OpenGL function pointers
-//	// ---------------------------------------
-//	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-//	{
-//		std::cout << "Failed to initialize GLAD" << std::endl;
-//		return -1;
-//	}
-//
-//	// build and compile our shader program
-//	// ------------------------------------
-//	// vertex shader
-//	int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-//	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-//	glCompileShader(vertexShader);
-//	// check for shader compile errors
-//	int success;
-//	char infoLog[512];
-//	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-//	if (!success)
-//	{
-//		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-//		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-//	}
-//	// fragment shader
-//	int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-//	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-//	glCompileShader(fragmentShader);
-//	// check for shader compile errors
-//	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-//	if (!success)
-//	{
-//		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-//		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-//	}
-//	// link shaders
-//	int shaderProgram = glCreateProgram();
-//	glAttachShader(shaderProgram, vertexShader);
-//	glAttachShader(shaderProgram, fragmentShader);
-//	glLinkProgram(shaderProgram);
-//	// check for linking errors
-//	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-//	if (!success) {
-//		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-//		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-//	}
-//	glDeleteShader(vertexShader);
-//	glDeleteShader(fragmentShader);
-//
-//	// set up vertex data (and buffer(s)) and configure vertex attributes
-//	// ------------------------------------------------------------------
-//	float vertices[] = {
-//		-1.0f, -0.521f, 0.0f, // left  
-//		0.22f, -0.521f, 0.0f, // right 
-//		0.5f, -0.5f, 0.0f,  // top
-//		0.5f, 0.5f, 0.0f
-//	};
-//
-//	unsigned int VBO, VAO;
-//	glGenVertexArrays(1, &VAO);
-//	glGenBuffers(1, &VBO);
-//	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-//	glBindVertexArray(VAO);
-//
-//	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-//	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-//
-//	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-//	glEnableVertexAttribArray(0);
-//
-//	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-//	glBindBuffer(GL_ARRAY_BUFFER, 0);
-//
-//	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-//	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-//	glBindVertexArray(0);
-//
-//
-//	// uncomment this call to draw in wireframe polygons.
-//	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-//
-//	// render loop
-//	// -----------
-//	while (!glfwWindowShouldClose(window))
-//	{
-//		// input
-//		// -----
-//		processInput(window);
-//
-//		// render
-//		// ------
-//		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-//		glClear(GL_COLOR_BUFFER_BIT);
-//
-//		// draw our first triangle
-//		glUseProgram(shaderProgram);
-//		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-//
-//		glDrawArrays(GL_LINES, 0, 4);
-//		// glBindVertexArray(0); // no need to unbind it every time 
-//
-//		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-//		// -------------------------------------------------------------------------------
-//		glfwSwapBuffers(window);
-//		glfwPollEvents();
-//	}
-//
-//	// optional: de-allocate all resources once they've outlived their purpose:
-//	// ------------------------------------------------------------------------
-//	glDeleteVertexArrays(1, &VAO);
-//	glDeleteBuffers(1, &VBO);
-//
-//	// glfw: terminate, clearing all previously allocated GLFW resources.
-//	// ------------------------------------------------------------------
-//	glfwTerminate();
-//	return 0;
-//}
-//
-//
-//// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-//// ---------------------------------------------------------------------------------------------------------
-//void processInput(GLFWwindow *window)
-//{
-//	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-//		glfwSetWindowShouldClose(window, true);
-//}
-//
-//// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-//// ---------------------------------------------------------------------------------------------
-//void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-//{
-//	// make sure the viewport matches the new window dimensions; note that width and 
-//	// height will be significantly larger than specified on retina displays.
-//	glViewport(0, 0, width, height);
-//}
+
+// settings
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
+
+const char *vertexShaderSource = "#version 330 core\n"
+"layout (location = 0) in vec3 aPos;\n"
+"void main()\n"
+"{\n"
+"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+"}\0";
+const char *fragmentShaderSource = "#version 330 core\n"
+"out vec4 FragColor;\n"
+"void main()\n"
+"{\n"
+"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+"}\n\0";
+
+int draw(void)
+{
+	// glfw: initialize and configure
+	// ------------------------------
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	// glfw window creation
+	// --------------------
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "YK Routing", NULL, NULL);
+	if (window == NULL)
+	{
+		std::cout << "Failed to create GLFW window" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+	glfwMakeContextCurrent(window);
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+	// glad: load all OpenGL function pointers
+	// ---------------------------------------
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		std::cout << "Failed to initialize GLAD" << std::endl;
+		return -1;
+	}
+
+	// build and compile our shader program
+	// ------------------------------------
+	// vertex shader
+	int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+	glCompileShader(vertexShader);
+	// check for shader compile errors
+	int success;
+	char infoLog[512];
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+	// fragment shader
+	int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+	glCompileShader(fragmentShader);
+	// check for shader compile errors
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+	// link shaders
+	int shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+	// check for linking errors
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+	if (!success) {
+		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+	}
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+
+	// set up vertex data (and buffer(s)) and configure vertex attributes
+	// ------------------------------------------------------------------
+	float vertices[] = {
+		-1.0f, -0.521f, 0.0f, // left  
+		0.22f, -0.521f, 0.0f, // right 
+		0.5f, -0.5f, 0.0f,  // top
+		0.5f, 0.5f, 0.0f
+	};
+
+	unsigned int VBO, VAO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+	glBindVertexArray(0);
+
+
+	// uncomment this call to draw in wireframe polygons.
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	// render loop
+	// -----------
+	while (!glfwWindowShouldClose(window))
+	{
+		// input
+		// -----
+		processInput(window);
+
+		// render
+		// ------
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		// draw our first triangle
+		glUseProgram(shaderProgram);
+		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+
+		glDrawArrays(GL_LINES, 0, 4);
+		// glBindVertexArray(0); // no need to unbind it every time 
+
+		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+		// -------------------------------------------------------------------------------
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+	// optional: de-allocate all resources once they've outlived their purpose:
+	// ------------------------------------------------------------------------
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
+
+	// glfw: terminate, clearing all previously allocated GLFW resources.
+	// ------------------------------------------------------------------
+	glfwTerminate();
+	return 0;
+}
+
+
+// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
+void processInput(GLFWwindow *window)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+}
+
+// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+// ---------------------------------------------------------------------------------------------
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	// make sure the viewport matches the new window dimensions; note that width and 
+	// height will be significantly larger than specified on retina displays.
+	glViewport(0, 0, width, height);
+}
 #pragma endregion
