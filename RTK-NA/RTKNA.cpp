@@ -46,14 +46,12 @@ vector<vector<string>> final_zone;
 vector<string> union_zone;
 vector<string> union_zone_diff;
 vector<vector<string>> ini_zone;
-vector<vector<string>> zones;
-vector<vector<string>> ini_zones;
-vector<vector<string>> final_zones;
+vector<vector<string>> ininet, finalnet, inidog, finaldog;
 net * first;
 vector<net*> netlist;
-vector<VCG*> allVCG, source, sink;
+vector<VCG*> allVCG, source, sink, mergedVCG;
 bool dog;
-vector<string> tops, bots;
+vector<string> tops, bots, L, Ldog;
 vector<int> zoneEnd;
 
 #pragma region methods
@@ -69,27 +67,27 @@ void Zone_union();
 void Zone_diff_union();
 void sourceAndSink();
 void findDistance();
-bool distFromSource(string, string, int, vector<string>*, vector<string> *);
+bool distFromSource(string, string, int, vector<string>, vector<string>);
 void distFromSink(string, string, int);
-//int Merge();
-string f(vector<string>);
-string g(vector<string>, string);
-//vector<string> zoneConvertToString(string index);
-//vector<string> zoneConvertToStringFinal(string index); //Because we're lazy
-//void zonesToString();
-//void updateVCG(string a, string adog, string b, string bdog);
-void updateZones(string, string);
+int Merge();
+vector<string> f(vector<string>, vector<string>);
+vector<string> g(vector<string>, vector<string>, vector<string>);
+void updateVCG(string a, string b);
+void updateZones(vector<string>, vector<string>);
 bool sortNet(const net *a, const net *b);
 vector<string> zoneConvertToStringAll(string);
-vector<int> zoneEnds();
 void trackToString();
 void printToFile();
-void dogleg(vector<string> *, vector<string>*);
+void dogleg(vector<string>, vector<string>);
 void updateVCGDog(int, int, VCG*);
 void processInput(GLFWwindow *);
 void framebuffer_size_callback(GLFWwindow* , int , int);
-string findExistingNetDog(string );
-void arraytonetDog();
+int VCGexistsDog(string id);
+vector<string> separateTrack(int, bool);
+vector<string> separateTrack(string); 
+int findPred(vector<string>::iterator it, string net, string dog, int );
+int findDesc(vector<string>::iterator it, string net, string dog, int );
+void convertToNetDog();
 #pragma endregion
 
 
@@ -114,7 +112,6 @@ int main(int argc, char* argv[])
 
 	//VCG 
 	makeVCG();
-	arraytonetDog();
 
 	//Zoning Code
 
@@ -124,11 +121,11 @@ int main(int argc, char* argv[])
 	Zone_Sort();
 	Zone_union();
 	Zone_diff_union();
-	//zonesToString();
+	convertToNetDog();
 	//zoneEnd = zoneEnds();      //Pending fix if needed
  	
 
-	//while (Merge() > 0);
+	while (Merge() > 0);
 
 	printf("\n\n%d", clock() - start);
 	printToFile();
@@ -141,208 +138,301 @@ int main(int argc, char* argv[])
 ///////////////////////////////////////////////////////////////////////
 
 #pragma region Merging
-//int Merge() {
-//	vector<string> L, R, zoneHold;
-//	string m, n;
-//	int counter = 0;
-//	for (size_t i = 0; i < zone.size() - 1; i++) {
-//		zoneHold = final_zones[i];
-//		R = ini_zones[i + 1];
-//		L.insert(L.end(), zoneHold.begin(), zoneHold.end());
-//		if (!R.empty())
-//		{
-//			n = g(L, (m = f(R)));
-//
-//			updateVCG(n, m);
-//			updateZones(n, m);
-//
-//			L.erase(remove(L.begin(), L.end(), n), L.end());
-//			L.push_back((n + "," + m));
-//			counter++;
-//
-//			sourceAndSink();
-//			findDistance();
-//		}
-//
-//	}
-//	return counter;
-//}
-//
-//string f(vector<string> Q) {
-//	double C = 100;
-//	double highest = 0;
-//	string high = "0";
-//	for (size_t i = 0; i < Q.size(); i++) {
-//		double hold = C * (allVCG[VCGexists((Q[i]))]->distanceToSource + allVCG[VCGexists((Q[i]))]->distanceToSink) + max(allVCG[VCGexists((Q[i]))]->distanceToSink, allVCG[VCGexists((Q[i]))]->distanceToSource);
-//		if (hold > highest) {
-//			highest = hold;
-//			high = Q[i];
-//		}
-//	}
-//	return high;
-//}
-//
-//
-//string g(vector<string> P, string m) {
-//	double C = 100;
-//	double lowest = 100000;
-//	string low = "0";
-//	for (size_t i = 0; i < P.size(); i++) {
-//		double hold = C * (max(allVCG[VCGexists((P[i]))]->distanceToSource, allVCG[VCGexists((m))]->distanceToSource) + max(allVCG[VCGexists((P[i]))]->distanceToSink, allVCG[VCGexists((m))]->distanceToSink)
-//			- max(allVCG[VCGexists((P[i]))]->distanceToSource + allVCG[VCGexists((P[i]))]->distanceToSink, allVCG[VCGexists((m))]->distanceToSink + allVCG[VCGexists((m))]->distanceToSource))
-//			- sqrt(allVCG[VCGexists((m))]->distanceToSource * allVCG[VCGexists((P[i]))]->distanceToSource) - sqrt(allVCG[VCGexists((m))]->distanceToSink * allVCG[VCGexists((P[i]))]->distanceToSink);
-//
-//		if (hold < lowest) {
-//			lowest = hold;
-//			low = P[i];
-//		}
-//	}
-//
-//	return low;
-//}
-//
-//vector<string> zoneConvertToString(string index) {
-//	vector<string> ret;
-//	for (size_t i = 0; i < ini_zone[stoi(index)].size(); i++) {
-//		ret.push_back(to_string(ini_zone[stoi(index)][i]));
-//	}
-//	return ret;
-//}
-//
-//vector<string> zoneConvertToStringFinal(string index) {
-//	vector<string> ret;
-//	for (size_t i = 0; i < final_zone[stoi(index)].size(); i++) {
-//		ret.push_back(to_string(final_zone[stoi(index)][i]));
-//	}
-//	return ret;
-//}
-//
-//vector<string> zoneConvertToStringAll(string index) {
-//	vector<string> ret;
-//	for (size_t i = 0; i < zone[stoi(index)].size(); i++) {
-//		ret.push_back(to_string(zone[stoi(index)][i]));
-//	}
-//	return ret;
-//}
-//
-//void zonesToString() {
-//	for (size_t i = 0; i < ini_zone.size(); i++) {
-//		ini_zones.push_back(zoneConvertToString(to_string(i)));
-//	}
-//
-//	for (size_t i = 0; i < final_zone.size(); i++) {
-//		final_zones.push_back(zoneConvertToStringFinal(to_string(i)));
-//	}
-//
-//	for (size_t i = 0; i < zone.size(); i++) {
-//		zones.push_back(zoneConvertToStringAll(to_string(i)));
-//	}
-//}
-//
-//void updateVCG(string a, string adog, string b, string bdog) {
-//	vector<string> newdesc, newpred;
-//
-//	for (size_t i = 0; i < allVCG.size(); i++) {
-//		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a) != allVCG[i]->decendents.end() && allVCG[i]->decendents.size() > 0)
-//		{
-//			newdesc.insert(newdesc.end(), allVCG[VCGexists(a, adog)]->decendents.begin(), allVCG[VCGexists(a, adog)]->decendents.end());
-//			allVCG[i]->decendents.erase(remove(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a), allVCG[i]->decendents.end());
-//			if (!(find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a + "," + b) != allVCG[i]->decendents.end())) {
-//				allVCG[i]->decendents.push_back(a + "," + b);
-//			}
-//		}
-//		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b) != allVCG[i]->decendents.end() && allVCG[i]->decendents.size() > 0)
-//		{
-//			newdesc.insert(newdesc.end(), allVCG[VCGexists(b, bdog)]->decendents.begin(), allVCG[VCGexists(b, bdog)]->decendents.end());
-//			allVCG[i]->decendents.erase(remove(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b), allVCG[i]->decendents.end());
-//			if (!(find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a + "," + b) != allVCG[i]->decendents.end())) {
-//				allVCG[i]->decendents.push_back(a + "," + b);
-//			}
-//		}
-//		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0)
-//		{
-//			newpred.insert(newpred.end(), allVCG[VCGexists(a, adog)]->predecessors.begin(), allVCG[VCGexists(a, adog)]->predecessors.end());
-//			allVCG[i]->predecessors.erase(remove(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a), allVCG[i]->predecessors.end());
-//			if (!(find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a + "," + b) != allVCG[i]->predecessors.end())) {
-//				allVCG[i]->predecessors.push_back(a + "," + b);
-//			}
-//		}
-//		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0)
-//		{
-//			newpred.insert(newpred.end(), allVCG[VCGexists(b, bdog)]->predecessors.begin(), allVCG[VCGexists(b, bdog)]->predecessors.end());
-//			allVCG[i]->predecessors.erase(remove(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b), allVCG[i]->predecessors.end());
-//			if (!(find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a + "," + b) != allVCG[i]->predecessors.end())) {
-//				allVCG[i]->predecessors.push_back(a + "," + b);
-//			}
-//		}
-//
-//	}
-//
-//	sort(newdesc.begin(), newdesc.end());
-//	sort(newpred.begin(), newpred.end());
-//	newdesc.erase(unique(newdesc.begin(), newdesc.end()), newdesc.end());
-//	newpred.erase(unique(newpred.begin(), newpred.end()), newpred.end());
-//
-//	VCG *combine = new VCG();
-//	combine->decendents = newdesc;
-//	combine->predecessors = newpred;
-//	combine->netid = a + "," + b;
-//	combine->distanceToSink = max(allVCG[VCGexists(a, adog)]->distanceToSink, allVCG[VCGexists(b, bdog)]->distanceToSink);
-//	combine->distanceToSource = max(allVCG[VCGexists(a, adog)]->distanceToSource, allVCG[VCGexists(b, bdog)]->distanceToSource);
-//
-//	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(a, adog)]), allVCG.end());
-//	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(b, bdog)]), allVCG.end());
-//	allVCG.push_back(combine);
-//}
-//
-//void updateZones(string a, string b) {
-//	vector<string>::iterator it1, it2;
-//	int ind1, ind2, i1, i2;
-//	for (size_t i = 0; i < ini_zones.size(); i++) {
-//		if ((it1 = find(ini_zones[i].begin(), ini_zones[i].end(), a)) != ini_zones[i].end())
-//		{
-//			ind1 = it1 - ini_zones[i].begin();
-//			ini_zones[i].erase(ini_zones[i].begin() + ind1);
-//			i1 = i;
-//
-//		}
-//		if ((it2 = find(ini_zones[i].begin(), ini_zones[i].end(), b)) != ini_zones[i].end())
-//		{
-//			ind2 = it2 - ini_zones[i].begin();
-//			ini_zones[i].erase(ini_zones[i].begin() + ind2);
-//			i2 = i;
-//		}
-//	}
-//
-//	if (i1 > i2) {
-//		ini_zones[i2].insert(ini_zones[i2].begin() + ind2, a + "," + b);
-//	}
-//	else {
-//		ini_zones[i1].insert(ini_zones[i1].begin() + ind1, a + "," + b);
-//	}
-//
-//	for (size_t i = 0; i < final_zones.size(); i++) {
-//		if ((it1 = find(final_zones[i].begin(), final_zones[i].end(), a)) != final_zones[i].end())
-//		{
-//			ind1 = it1 - final_zones[i].begin();
-//			final_zones[i].erase(final_zones[i].begin() + ind1);
-//			i1 = i;
-//		}
-//		if ((it2 = find(final_zones[i].begin(), final_zones[i].end(), b)) != final_zones[i].end())
-//		{
-//			ind2 = it2 - final_zones[i].begin();
-//			final_zones[i].erase(final_zones[i].begin() + ind2);
-//			i2 = i;
-//		}
-//	}
-//
-//	if (i1 < i2) {
-//		final_zones[i2].insert(final_zones[i2].begin() + ind2, a + "," + b);
-//	}
-//	else {
-//		final_zones[i1].insert(final_zones[i1].begin() + ind1, a + "," + b);
-//	}
-//}
+
+int findininet(vector<string>::iterator it, string net, string dog, int index) {
+	vector<string>::iterator it2;
+	it2 = find(ininet[index].begin() + (it - ininet[index].begin()), ininet[index].end(), net);
+	if (it2 == ininet[index].end()) {
+		return -1;
+	}
+	int ind = it2 - ininet[index].begin();
+	if (inidog[index][ind] == dog) {
+		return ind;
+	}
+	else {
+		return findininet(it2 + 1, net, dog, index);
+	}
+}
+
+int findfinalnet(vector<string>::iterator it, string net, string dog, int index) {
+	vector<string>::iterator it2;
+	it2 = find(finalnet[index].begin() + (it - finalnet[index].begin()), finalnet[index].end(), net);
+	if (it2 == finalnet[index].end()) {
+		return -1;
+	}
+	int ind = it2 - finalnet[index].begin();
+	if (finaldog[index][ind] == dog) {
+		return ind;
+	}
+	else {
+		return findfinalnet(it2 + 1, net, dog, index);
+	}
+}
+
+int findL(vector<string>::iterator it, string net, string dog) {
+	//string::iterator it2;
+	int i = (it - L.begin());
+	auto it2 = find(L.begin() + i, L.end(), net);
+	if (it2 == L.end()) {
+		return -1;
+	}
+	int ind = it2 - L.begin();
+	if (Ldog[ind] == dog) {
+		return ind;
+	}
+	else {
+		return findL(it2 + 1, net, dog);
+	}
+}
+
+int Merge() {
+	vector<string> R, zoneHold, Rdog, zoneHoldDog;
+	vector<string> m, n;
+	L.clear();
+	Ldog.clear();
+	int counter = 0, ind;
+	for (size_t i = 0; i < zone.size() - 1; i++) {
+		zoneHold = finalnet[i];
+		zoneHoldDog = finaldog[i];
+		R = ininet[i + 1];
+		Rdog = inidog[i + 1];
+		L.insert(L.end(), zoneHold.begin(), zoneHold.end());
+		Ldog.insert(Ldog.end(), zoneHoldDog.begin(), zoneHoldDog.end());
+		if (!R.empty())
+		{
+			n = g(L, Ldog, (m = f(R, Rdog)));
+
+			updateVCG((n[0] + n[1]), m[0] + m[1]);
+			updateZones(n, m);
+
+			if ((ind = findL(L.begin(), n[0], n[1])) != -1)
+			{
+				L.erase(L.begin() + ind);
+				Ldog.erase(Ldog.begin() + ind);
+			}
+
+			L.push_back((n[0] + "," + m[0]));
+			Ldog.push_back((n[1].empty() ? " " : n[1]) + "," + (m[1].empty() ? " " : m[1]));
+			counter++;
+
+			sourceAndSink();
+			findDistance();
+		}
+
+	}
+	return counter;
+}
+
+vector<string> f(vector<string> Q, vector<string> N) {
+	double C = 100;
+	double highest = 0;
+	vector<string> high;
+
+	for (size_t i = 0; i < Q.size(); i++) {
+		double hold = C * (allVCG[VCGexists((Q[i]), N[i])]->distanceToSource + allVCG[VCGexists((Q[i]), N[i])]->distanceToSink) + max(allVCG[VCGexists((Q[i]), N[i])]->distanceToSink, allVCG[VCGexists((Q[i]), N[i])]->distanceToSource);
+		if (hold > highest) {
+			highest = hold;
+			if (high.empty())
+			{
+				high.push_back(Q[i]);
+				high.push_back(N[i]);
+			}
+			else {
+				high[0] = Q[i];
+				high[1] = N[i];
+			}
+		}
+	}
+	return high;
+}
+
+
+vector<string> g(vector<string> P, vector<string> E, vector<string> m) {
+	double C = 100;
+	double lowest = 100000;
+	vector<string> low;
+	for (size_t i = 0; i < P.size(); i++) {
+		double hold = C * (max(allVCG[VCGexists(P[i], E[i])]->distanceToSource, allVCG[VCGexists((m[0]), m[1])]->distanceToSource) + max(allVCG[VCGexists((P[i]), E[i])]->distanceToSink, allVCG[VCGexists((m[0]), m[1])]->distanceToSink)
+			- max(allVCG[VCGexists((P[i]), E[i])]->distanceToSource + allVCG[VCGexists((P[i]), E[i])]->distanceToSink, allVCG[VCGexists((m[0]), m[1])]->distanceToSink + allVCG[VCGexists(m[0], m[1])]->distanceToSource))
+			- sqrt(allVCG[VCGexists((m[0]), m[1])]->distanceToSource * allVCG[VCGexists((P[i]), E[i])]->distanceToSource) - sqrt(allVCG[VCGexists((m[0]), m[1])]->distanceToSink * allVCG[VCGexists((P[i]), E[i])]->distanceToSink);
+
+		if (hold < lowest) {
+			lowest = hold;
+			if (low.empty())
+			{
+				low.push_back(P[i]);
+				low.push_back(E[i]);
+			}
+			else {
+				low[0] = P[i];
+				low[1] = E[i];
+			}
+		}
+	}
+
+	return low;
+}
+
+void updateVCG(string a,  string b) {
+	vector<string> newdesc, newpred, ida, idb, newdogdesc, newdogpred;
+
+	ida = separateTrack(a);
+	idb = separateTrack(b);
+
+#pragma region desc
+	newdesc = allVCG[VCGexistsDog(a)]->decendents;
+	newdesc.insert(newdesc.begin(), allVCG[VCGexistsDog(b)]->decendents.begin(), allVCG[VCGexistsDog(b)]->decendents.end());
+
+	newpred = allVCG[VCGexistsDog(a)]->predecessors;
+	newpred.insert(newpred.begin(), allVCG[VCGexistsDog(b)]->predecessors.begin(), allVCG[VCGexistsDog(b)]->predecessors.end());
+
+	newdogdesc = allVCG[VCGexistsDog(a)]->dogdesc;
+	newdogdesc.insert(newdogdesc.begin(), allVCG[VCGexistsDog(b)]->dogdesc.begin(), allVCG[VCGexistsDog(b)]->dogdesc.end());
+
+	newdogpred = allVCG[VCGexistsDog(a)]->dogpred;
+	newdogpred.insert(newdogpred.begin(), allVCG[VCGexistsDog(b)]->dogpred.begin(), allVCG[VCGexistsDog(b)]->dogpred.end());
+#pragma endregion
+
+	for (size_t i = 0; i < allVCG.size(); i++) {
+		//if any occurance of a in desc
+		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), ida[0]) != allVCG[i]->decendents.end() && find(allVCG[i]->dogdesc.begin(), allVCG[i]->dogdesc.end(), ida[1]) != allVCG[i]->dogdesc.end() && allVCG[i]->decendents.size() > 0)
+		{	
+			int descind = findDesc(allVCG[i]->decendents.begin(), ida[0], ida[1], i);
+
+			allVCG[i]->decendents.erase(allVCG[i]->decendents.begin()+descind);
+			allVCG[i]->dogdesc.erase(allVCG[i]->dogdesc.begin() + descind);
+
+			//prevent double edge
+			if (!(find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), ida[0] + "," + idb[0]) != allVCG[i]->decendents.end()) && !(find(allVCG[i]->dogdesc.begin(), allVCG[i]->dogdesc.end(), (ida[1].empty() ? " " : ida[1]) + "," + (idb[1].empty() ? " " : idb[1])) != allVCG[i]->dogdesc.end())) {
+				allVCG[i]->decendents.push_back(ida[0] + "," + idb[0]);
+				allVCG[i]->dogdesc.push_back((ida[1].empty() ? " " : ida[1]) + "," + (idb[1].empty() ? " " : idb[1]));
+			}
+		}
+
+		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), idb[0]) != allVCG[i]->decendents.end() && find(allVCG[i]->dogdesc.begin(), allVCG[i]->dogdesc.end(), idb[1]) != allVCG[i]->dogdesc.end() && allVCG[i]->decendents.size() > 0)
+		{	
+			int descind = findDesc(allVCG[i]->decendents.begin(), idb[0], idb[1], i);
+
+			allVCG[i]->decendents.erase(allVCG[i]->decendents.begin() + descind);
+			allVCG[i]->dogdesc.erase(allVCG[i]->dogdesc.begin() + descind);
+
+			if (!(find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), ida[0] + "," + idb[0]) != allVCG[i]->decendents.end()) && !(find(allVCG[i]->dogdesc.begin(), allVCG[i]->dogdesc.end(), (ida[1].empty() ? " " : ida[1]) + "," + (idb[1].empty() ? " " : idb[1])) != allVCG[i]->dogdesc.end())) {
+				allVCG[i]->decendents.push_back(ida[0] + "," + idb[0]);
+				allVCG[i]->dogdesc.push_back((ida[1].empty() ? " " : ida[1]) + "," + (idb[1].empty() ? " " : idb[1]));
+			}
+		}
+
+		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), ida[0]) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0 && find(allVCG[i]->dogpred.begin(), allVCG[i]->dogpred.end(), ida[1]) != allVCG[i]->dogpred.end())
+		{
+
+			int predind = findPred(allVCG[i]->predecessors.begin(), ida[0], ida[1], i);
+
+			allVCG[i]->predecessors.erase(allVCG[i]->predecessors.begin() + predind);
+			allVCG[i]->dogpred.erase(allVCG[i]->dogpred.begin() + predind);
+
+			if (!(find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), ida[0] + "," + idb[0]) != allVCG[i]->predecessors.end()) && !(find(allVCG[i]->dogpred.begin(), allVCG[i]->dogpred.end(), (ida[1].empty() ? " " : ida[1]) + "," + (idb[1].empty() ? " " : idb[1])) != allVCG[i]->dogpred.end())) {
+				allVCG[i]->predecessors.push_back(ida[0] + "," + idb[0]);
+				allVCG[i]->dogpred.push_back((ida[1].empty() ? " " : ida[1]) + "," + (idb[1].empty() ? " " : idb[1]));
+			}
+		}
+
+		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), idb[0]) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0 && find(allVCG[i]->dogpred.begin(), allVCG[i]->dogpred.end(), idb[1]) != allVCG[i]->dogpred.end())
+		{
+
+			int predind = findPred(allVCG[i]->predecessors.begin(), idb[0], idb[1], i);
+
+			allVCG[i]->predecessors.erase(allVCG[i]->predecessors.begin() + predind);
+			allVCG[i]->dogpred.erase(allVCG[i]->dogpred.begin() + predind);
+
+			if (!(find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), ida[0] + "," + idb[0]) != allVCG[i]->predecessors.end()) && !(find(allVCG[i]->dogpred.begin(), allVCG[i]->dogpred.end(), (ida[1].empty() ? " " : ida[1]) + "," + (idb[1].empty() ? " " : idb[1])) != allVCG[i]->dogpred.end())) {
+				allVCG[i]->predecessors.push_back(ida[0] + "," + idb[0]);
+				allVCG[i]->dogpred.push_back((ida[1].empty() ? " " : ida[1]) + "," + (idb[1].empty() ? " " : idb[1]));
+			}
+		}
+
+	}
+
+	VCG *combine = new VCG();
+	combine->decendents = newdesc;
+	combine->predecessors = newpred;
+	combine->dogdesc = newdogdesc;
+	combine->dogpred = newdogpred;
+	combine->netid = ida[0] + "," + idb[0];
+	combine->dogid = (ida[1].empty() ? " " : ida[1]) + "," + (idb[1].empty() ? " " : idb[1]);
+	combine->distanceToSink = max(allVCG[VCGexistsDog(a)]->distanceToSink, allVCG[VCGexistsDog(b)]->distanceToSink);
+	combine->distanceToSource = max(allVCG[VCGexistsDog(a)]->distanceToSource, allVCG[VCGexistsDog(b)]->distanceToSource);
+	combine->startind = min(allVCG[VCGexistsDog(a)]->startind, allVCG[VCGexistsDog(b)]->startind);
+	combine->endind = max(allVCG[VCGexistsDog(a)]->endind, allVCG[VCGexistsDog(b)]->endind);
+
+	if (a.find(',') == a.npos)
+	{
+		mergedVCG.push_back(allVCG[VCGexistsDog(a)]);
+	}
+	if (b.find(',') == b.npos)
+	{
+		mergedVCG.push_back(allVCG[VCGexistsDog(b)]);
+	}
+
+	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexistsDog(a)]), allVCG.end());
+	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexistsDog(b)]), allVCG.end());
+	allVCG.push_back(combine);
+}
+
+void updateZones(vector<string> a, vector<string> b) {
+	int ind, ind1, ind2, i1, i2;
+	for (size_t i = 0; i < ininet.size(); i++) {
+		if ((ind = findininet(ininet[i].begin(),  a[0],a[1], i)) != -1)
+		{
+			ind1 = ind;
+			ininet[i].erase(ininet[i].begin() + ind1);
+			inidog[i].erase(inidog[i].begin() + ind1);
+			i1 = i;
+		}
+		if ((ind = findininet(ininet[i].begin(), b[0], b[1], i)) != -1)
+		{
+			ind2 = ind;
+			ininet[i].erase(ininet[i].begin() + ind2);
+			inidog[i].erase(inidog[i].begin() + ind2);
+			i2 = i;
+		}
+	}
+
+	if (i1 > i2) {
+		ininet[i2].insert(ininet[i2].begin() + ind2, a[0] + "," + b[1]);
+		inidog[i2].insert(inidog[i2].begin() + ind2, (a[1].empty() ? " " : a[1]) + "," + (b[1].empty() ? " " : b[1]));
+	}
+	else {
+		ininet[i1].insert(ininet[i1].begin() + ind1, a[0] + "," + b[1]);
+		inidog[i1].insert(inidog[i1].begin() + ind1, (a[1].empty() ? " " : a[1]) + "," + (b[1].empty() ? " " : b[1]));
+	}
+
+	for (size_t i = 0; i < finalnet.size(); i++) {
+		if ((ind = findfinalnet(finalnet[i].begin(), a[0], a[1], i)) != -1)
+		{
+			ind1 = ind;
+			finalnet[i].erase(finalnet[i].begin() + ind1);
+			finaldog[i].erase(finaldog[i].begin() + ind1);
+			i1 = i;
+
+		}
+		if ((ind = findfinalnet(finalnet[i].begin(), b[0], b[1], i)) != -1)
+		{
+			ind2 = ind;
+			finalnet[i].erase(finalnet[i].begin() + ind2);
+			finaldog[i].erase(finaldog[i].begin() + ind2);
+			i2 = i;
+		}
+	}
+
+	if (i1 < i2) {
+		finalnet[i2].insert(finalnet[i2].begin() + ind2, a[0] + "," + b[1]);
+		finaldog[i2].insert(finaldog[i2].begin() + ind2, (a[1].empty() ? " " : a[1]) + "," + (b[1].empty() ? " " : b[1]));
+	}
+	else {
+		finalnet[i1].insert(finalnet[i1].begin() + ind1, a[0] + "," + b[1]);
+		finaldog[i1].insert(finaldog[i1].begin() + ind1, (a[1].empty() ? " " : a[1]) + "," + (b[1].empty() ? " " : b[1]));
+	}
+}
 #pragma endregion
 
 
@@ -360,7 +450,7 @@ void Zoning() {
 		vector<string> row; // Create an empty row
 		for (size_t j1 = 0; j1 < allVCG.size(); j1++) {
 			if (i1 <= allVCG[j1]->endind && i1 >= allVCG[j1]->startind) {
-				row.push_back(allVCG[j1]->netid); // Add an element (column) to the row
+				row.push_back(allVCG[j1]->netid + allVCG[j1]->dogid); // Add an element (column) to the row
 			}
 		}
 		sort(row.begin(),row.end()); // Sort strings 
@@ -412,7 +502,6 @@ void Zone_union() {
 	union_zone = vector<string>(all.begin(), all.end());
 }
 
-
 void Zone_Sort() {
 	final_zone.resize(static_cast<int>(zone.size()));
 	ini_zone.resize(static_cast<int>(zone.size()));
@@ -462,6 +551,32 @@ void Zone_diff_union() {
 	final_zone[static_cast<int>(zone.size()) - 1] = temp_zone_union;
 }
 
+void convertToNetDog() {
+
+	for (size_t i = 0; i < ini_zone.size(); i++) {
+		vector<string> done1, done2;
+		for (size_t j = 0; j < ini_zone[i].size(); j++) {
+			vector<string> id;
+			id = separateTrack(ini_zone[i][j]);
+			done1.push_back(id[0]);
+			done2.push_back(id[1]);
+		}
+		ininet.push_back(done1);
+		inidog.push_back(done2);
+	}
+
+	for (size_t i = 0; i < final_zone.size(); i++) {
+		vector<string> done1, done2;
+		for (size_t j = 0; j < final_zone[i].size(); j++) {
+			vector<string> id;
+			id = separateTrack(final_zone[i][j]);
+			done1.push_back(id[0]);
+			done2.push_back(id[1]);
+		}
+		finalnet.push_back(done1);
+		finaldog.push_back(done2);
+	}
+}
 #pragma endregion
 
 
@@ -511,6 +626,8 @@ void makeVCG() {
 	for (size_t i = 0; i < netlist.size(); i++) {
 		allVCG[VCGexists(to_string(netlist[i]->netnum), "")]->indexes = netlist[i]->indexes;
 		allVCG[VCGexists(to_string(netlist[i]->netnum), "")]->directions = netlist[i]->directions;
+		allVCG[VCGexists(to_string(netlist[i]->netnum), "")]->startind = netlist[i]->startind;
+		allVCG[VCGexists(to_string(netlist[i]->netnum), "")]->endind = netlist[i]->endind;
 	}
 
 	sourceAndSink();
@@ -530,42 +647,6 @@ int VCGexists(string netid, string dogid) {
 	return -1;
 }
 
-//Removes transient edges with low effort O(n3)
-//void transientRemoval() {
-//	vector<string> possibleRemove;
-//	vector<string> dogRemove;
-//
-//	//remove transient edges
-//	//iterate through all VCG
-//	for (size_t i = 0; i < allVCG.size(); i++) {
-//		possibleRemove = allVCG[i]->decendents;
-//		//iterate through decendents
-//		for (size_t j = 0; j < possibleRemove.size(); j++) {
-//			//get list of decendents of decendents
-//			VCG *check = allVCG[VCGexists(possibleRemove[j])];
-//			//remove common decendents from tallest ancestor
-//			for (size_t k = 0; k < check->decendents.size(); k++) {
-//				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->decendents[k]), possibleRemove.end());
-//			}
-//		}
-//		allVCG[i]->decendents = possibleRemove;
-//	}
-//
-//	for (size_t i = 0; i < allVCG.size(); i++) {
-//		possibleRemove = allVCG[i]->predecessors;
-//		//iterate through predecessors
-//		for (size_t j = 0; j < possibleRemove.size(); j++) {
-//			//get list of preds of preds
-//			VCG *check = allVCG[VCGexists(possibleRemove[j])];
-//			//remove common predecessor from tallest offspring
-//			for (size_t k = 0; k < check->predecessors.size(); k++) {
-//				possibleRemove.erase(std::remove(possibleRemove.begin(), possibleRemove.end(), check->predecessors[k]), possibleRemove.end());
-//			}
-//		}
-//		allVCG[i]->predecessors = possibleRemove;
-//	}
-//}
-
 //fills the source and sink vectors
 void sourceAndSink() {
 	source.clear();
@@ -582,36 +663,43 @@ void sourceAndSink() {
 
 void findDistance() {
 	for (int i = 0; i < (int)source.size(); i++) {
-		vector<string> *p = new vector<string>();
-		vector<string> *f = new vector<string>();
+		vector<string> p = vector<string>();
+		vector<string> f = vector<string>();
+		p.push_back(source[i]->netid);
+		f.push_back(source[i]->dogid);
 		if (!distFromSource(source[i]->netid, source[i]->dogid, 0, p, f)) {
 			sourceAndSink();
 			i = -1;
 		}
 	}
 
-	for (size_t i = 0; i < sink.size(); i++) {
+for (size_t i = 0; i < sink.size(); i++) {
 		distFromSink(sink[i]->netid, sink[i]->dogid, 0);
 	}
 }
 
-bool distFromSource(string netid, string dogid, int counter, vector<string> *path, vector<string> *dogpath) {
+bool distFromSource(string netid, string dogid, int counter, vector<string> path, vector<string> dogpath) {
 	bool flag = true;
 	if (counter > allVCG[VCGexists(netid, dogid)]->distanceToSource) {
 		allVCG[VCGexists(netid, dogid)]->distanceToSource = counter;
 	}
 	
 	for (size_t i = 0; i < allVCG[VCGexists(netid, dogid)]->decendents.size(); i++) {
-		if (find(path->begin(), path->end(), allVCG[VCGexists(netid, dogid)]->decendents[i]) != path->end()) {
-			path->erase(path->begin(), find(path->begin(), path->end(), allVCG[VCGexists(netid, dogid)]->decendents[i]));
+		if (find(path.begin(), path.end(), allVCG[VCGexists(netid, dogid)]->decendents[i]) != path.end() && find(dogpath.begin(), dogpath.end(), allVCG[VCGexists(netid, dogid)]->dogdesc[i]) != dogpath.end()) {
+			path.erase(path.begin(), find(path.begin(), path.end(), allVCG[VCGexists(netid, dogid)]->decendents[i]));
 			dogleg(path, dogpath);
 			flag = false;
 			break;
 		}
-		path->push_back(allVCG[VCGexists(netid, dogid)]->decendents[i]);
-		dogpath->push_back(allVCG[VCGexists(netid, dogid)]->dogdesc[i]);
+		path.push_back(allVCG[VCGexists(netid, dogid)]->decendents[i]);
+		dogpath.push_back(allVCG[VCGexists(netid, dogid)]->dogdesc[i]);
 		if (allVCG[VCGexists(netid, dogid)]->decendents.size() > 0) {
-			distFromSource(allVCG[VCGexists(netid, dogid)]->decendents[i], allVCG[VCGexists(netid, dogid)]->dogdesc[i], counter + 1, path, dogpath);
+			if (!distFromSource(allVCG[VCGexists(netid, dogid)]->decendents[i], allVCG[VCGexists(netid, dogid)]->dogdesc[i], counter + 1, path, dogpath))
+			{
+				return false;
+			}
+			int index = path.erase(remove(path.begin(), path.end(), allVCG[VCGexists(netid, dogid)]->decendents[i]), path.end()) - path.begin();
+			dogpath.erase(remove(dogpath.begin() + index, dogpath.end(), allVCG[VCGexists(netid, dogid)]->dogdesc[i]), dogpath.end());
 		}
 	}
 
@@ -628,7 +716,7 @@ void distFromSink(string netid, string dogid, int counter) {
 		allVCG[VCGexists(netid, dogid)]->distanceToSink = counter;
 	}
 	for (size_t i = 0; i < allVCG[VCGexists(netid, dogid)]->predecessors.size(); i++) {
-		distFromSink(allVCG[VCGexists(netid, dogid)]->predecessors[i], allVCG[VCGexists(netid, dogid)]->predecessors[i], counter + 1);
+		distFromSink(allVCG[VCGexists(netid, dogid)]->predecessors[i], allVCG[VCGexists(netid, dogid)]->dogpred[i], counter + 1);
 	}
 }
 
@@ -639,21 +727,6 @@ int getNetlistInd(int index) {
 		}
 	}
 }
-
-//vector<int> zoneEnds() {
-//	vector<int> ret;
-//	int maxEnd = 0;
-//	for (size_t i = 0; i < final_zone.size(); i++) {
-//		for (size_t j = 0; j < final_zone[i].size(); j++)
-//		{
-//			maxEnd = (maxEnd < netlist[getNetlistInd(final_zone[i][j])]->endind) ? netlist[getNetlistInd(final_zone[i][j])]->endind : maxEnd;
-//		}
-//		ret.push_back(maxEnd);
-//		maxEnd = 0;
-//	}
-//
-//	return ret;
-//}
 
 void trackToString() {
 	for (size_t i = 0; i < top.size(); i++) {
@@ -703,12 +776,12 @@ void arraytonet() {
 	int previndex;
 	//top part of input
 	for (int i = 0; i < top.size(); i++) {
-		net *next = new net;
+		net *next = new net, *next1 = new net;
 		int nextnet = top.at(i);
 		int net = findExistingNet(nextnet);
 
 		if (nextnet == 0) {
-			continue;
+			goto label;
 		}
 		else if (net != -1) {
 			netlist[net]->indexes.push_back(i);
@@ -723,12 +796,10 @@ void arraytonet() {
 			next->netnum = nextnet;
 			netlist.push_back(next);
 		}
-	}
-	//bottom part of input
-	for (int i = 0; i < bot.size(); i++) {
-		net *next = new net;
-		int nextnet = bot.at(i);
-		int net = findExistingNet(nextnet);
+
+		label:
+		nextnet = bot.at(i);
+		net = findExistingNet(nextnet);
 
 		if (nextnet == 0) {
 			continue;
@@ -744,78 +815,24 @@ void arraytonet() {
 			}
 		}
 		else {
-			next->startind = i;
-			next->directions.push_back(false);
-			next->endind = i;
-			next->indexes.push_back(i);
-			next->netnum = nextnet;
-			netlist.push_back(next);
+			next1->startind = i;
+			next1->directions.push_back(false);
+			next1->endind = i;
+			next1->indexes.push_back(i);
+			next1->netnum = nextnet;
+			netlist.push_back(next1);
 		}
 	}
 
 	sort(netlist.begin(), netlist.end(), sortNet);
 }
 
-void arraytonetDog() {
-	string previndex;
-	//top part of input
-	for (int i = 0; i < tops.size(); i++) {
-		VCG *next = new VCG;
-		string nextnet = tops.at(i);
-		string net = findExistingNetDog(nextnet);
-
-		if (nextnet.compare("0")) {
-			continue;
-		}
-		else if (!(net.compare("-1"))) {
-			allVCG[VCGexistsDog(net)]->indexes.push_back(i);
-			allVCG[VCGexistsDog(net)]->directions.push_back(true);
-			allVCG[VCGexistsDog(net)]->endind = i;
-		}
-		else {
-			next->startind = i;
-			next->directions.push_back(true);
-			next->endind = i;
-			next->indexes.push_back(i);
-			next->netid = nextnet;
-			allVCG.push_back(next);
-		}
-	}
-	//bottom part of input
-	for (int i = 0; i < bot.size(); i++) {
-		VCG *next = new VCG;
-		string nextnet = tops.at(i);
-		string net = findExistingNetDog(nextnet);
-
-		if (nextnet.compare("0")) {
-			continue;
-		}
-		else if (!(net.compare("-1"))) {
-			allVCG[VCGexistsDog(net)]->indexes.push_back(i);
-			allVCG[VCGexistsDog(net)]->directions.push_back(true);
-			if (allVCG[VCGexistsDog(net)]->startind > i) {
-				allVCG[VCGexistsDog(net)]->startind = i;
-			}
-			if (allVCG[VCGexistsDog(net)]->endind < i) {
-				allVCG[VCGexistsDog(net)]->endind = i;
-			}
-		}
-		else {
-			next->startind = i;
-			next->directions.push_back(false);
-			next->endind = i;
-			next->indexes.push_back(i);
-			next->netid = nextnet;
-			allVCG.push_back(next);
-		}
-	}
-	
-}
 
 //accesory function to sort the netlist by netnum
 bool sortNet(const net *a, const net *b) {
 	return a->netnum < b->netnum;
 }
+
 
 //checks to see if there is an existing net with netnum net
 int findExistingNet(int net) {
@@ -828,32 +845,23 @@ int findExistingNet(int net) {
 
 	return -1;
 }
-string findExistingNetDog(string net) {
-
-	for (int i = 0; i < allVCG.size(); i++) {
-		if (allVCG[i]->netid.compare(net)) {
-			return allVCG[i]->netid;
-		}
-	}
-
-	return "-1";
-}
 #pragma endregion
 
 
 ///////////////////////////////////////////////////////////////////////
 //							DOGLEGGING								 //
 ///////////////////////////////////////////////////////////////////////
+#pragma region Doglegging
 
-void dogleg(vector<string> *path, vector<string> *dogpath) {
+void dogleg(vector<string> path, vector<string> dogpath) {
 	int index = -1;
 	bool direction;
 
 	//find index at which cycle begins
-	VCG *hold = allVCG[VCGexists(path->at(0), dogpath->at(0))];
-	VCG *under = allVCG[VCGexists(path->at(1), dogpath->at(0))];
-	VCG *above = allVCG[VCGexists(path->at(path->size() - 1), dogpath->at(path->size() - 1))];
-	
+	VCG *hold = allVCG[VCGexists(path.at(0), dogpath.at(0))];
+	VCG *under = allVCG[VCGexists(path.at(1), dogpath.at(0))];
+	VCG *above = allVCG[VCGexists(path.at(path.size() - 1), dogpath.at(path.size() - 1))];
+
 	for (size_t j = 0; j < hold->indexes.size(); j++) {
 		if (hold->directions[j]) {
 			//check  for dogid
@@ -863,7 +871,7 @@ void dogleg(vector<string> *path, vector<string> *dogpath) {
 				direction = true;
 				break;
 			}
-			
+
 		}
 		if (!hold->directions[j]) {
 			//check for dogid
@@ -900,6 +908,7 @@ void dogleg(vector<string> *path, vector<string> *dogpath) {
 				continue;
 			}
 			dogindex = i;
+			break;
 		}
 	}
 
@@ -910,14 +919,20 @@ int VCGexistsDog(string id) {
 	int i = 0;
 	bool flag = false;
 	for (char c : id) {
-		if (c > 65) {
+		if (c >= 65) {
 			flag = true;
 			break;
 		}
 		i++;
 	}
 
-	return VCGexists(id.substr(0, i), flag ? id.substr(i + 1) : "");
+	string id1 = id.substr(0, i);
+	if (flag)
+	{
+		string id2 = id.substr(i);
+	}
+
+	return VCGexists(id.substr(0, i), flag ? id.substr(i) : "");
 }
 
 int findPred(vector<string>::iterator it, string net, string dog, int index) {
@@ -926,7 +941,7 @@ int findPred(vector<string>::iterator it, string net, string dog, int index) {
 	if (it2 == allVCG[index]->predecessors.end()) {
 		return -1;
 	}
-	int ind = it - allVCG[index]->predecessors.begin();
+	int ind = it2 - allVCG[index]->predecessors.begin();
 	if (allVCG[index]->dogpred[ind] == dog) {
 		return ind;
 	}
@@ -941,7 +956,7 @@ int findDesc(vector<string>::iterator it, string net, string dog, int index) {
 	if (it2 == allVCG[index]->decendents.end()) {
 		return -1;
 	}
-	int ind = it - allVCG[index]->decendents.begin();
+	int ind = it2 - allVCG[index]->decendents.begin();
 	if (allVCG[index]->dogdesc[ind] == dog) {
 		return ind;
 	}
@@ -955,7 +970,7 @@ vector<string> separateTrack(int index, bool track) {
 	int i = 0;
 	bool flag = false;
 	for (char c : track ? tops[index] : bots[index]) {
-		if (c > 65) {
+		if (c >= 65) {
 			flag = true;
 			break;
 		}
@@ -964,12 +979,38 @@ vector<string> separateTrack(int index, bool track) {
 
 	if (flag) {
 		ret.push_back(track ? tops[index].substr(0, i) : bots[index].substr(0, i));
-		ret.push_back(track ? tops[index].substr(i + 1) : bots[index].substr(i + 1));
+		ret.push_back(track ? tops[index].substr(i) : bots[index].substr(i));
 	}
 	else {
 		ret.push_back(track ? tops[index].substr(0, i) : bots[index].substr(0, i));
 		ret.push_back("");
 	}
+	return ret;
+}
+
+vector<string> separateTrack(string id) {
+	vector<string> ret;
+	int i = 0;
+	bool flag = false;
+	for (char c : id) {
+		if (c >= 65) {
+			flag = true;
+			break;
+		}
+		i++;
+	}
+
+	ret.push_back(id.substr(0, i));
+	
+	if (flag)
+	{
+		ret.push_back(id.substr(i));
+	}
+	else {
+		ret.push_back("");
+	}
+
+
 	return ret;
 }
 
@@ -983,7 +1024,7 @@ void lexiDog(string netid, string dogid) {
 	}
 
 	for (size_t i = 0; i < tops.size(); i++) {
-		
+
 		if (tops[i] < (netid + dogid)) {
 			stringstream ss;
 			ss << (dogid[0] + 1);
@@ -1051,17 +1092,17 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 	for (size_t i = 0; i < allVCG.size(); i++) {
 		int predind = findPred(allVCG[i]->predecessors.begin(), rem->netid, rem->dogid, i);
 		int descind = findDesc(allVCG[i]->decendents.begin(), rem->netid, rem->dogid, i);
-		
+
 		if (descind != -1)
 		{
-			allVCG[i]->decendents.erase(remove(allVCG[i]->decendents.begin() + descind , allVCG[i]->decendents.end(), rem->netid), allVCG[i]->decendents.end());
-			allVCG[i]->dogdesc.erase(remove(allVCG[i]->dogdesc.begin() + descind, allVCG[i]->dogdesc.end(), rem->dogid), allVCG[i]->dogdesc.end());			
+			allVCG[i]->decendents.erase(allVCG[i]->decendents.begin() + descind);
+			allVCG[i]->dogdesc.erase(allVCG[i]->dogdesc.begin() + descind);
 		}
-		
+
 		if (predind != -1)
 		{
-			allVCG[i]->predecessors.erase(remove(allVCG[i]->predecessors.begin() + predind, allVCG[i]->predecessors.end(), rem->netid), allVCG[i]->predecessors.end());
-			allVCG[i]->dogpred.erase(remove(allVCG[i]->dogpred.begin() + predind, allVCG[i]->dogpred.end(), rem->dogid), allVCG[i]->dogpred.end());
+			allVCG[i]->predecessors.erase(allVCG[i]->predecessors.begin() + predind);
+			allVCG[i]->dogpred.erase(allVCG[i]->dogpred.begin() + predind);
 		}
 	}
 
@@ -1073,13 +1114,16 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 	a->dogid = s;
 	a->dogcount = rem->dogcount;
 	string net = rem->netid + rem->dogid; // change for double dogleg when necessary
-	
+
 	vector<string> id;
 	for (size_t i = 0; i < dogind; i++) {
 		if (!tops[i].compare(net)) {
-			id = separateTrack(i, true);
-			a->decendents.push_back(id[0]);//separate bots
-			a->dogdesc.push_back(id[1]);
+			id = separateTrack(i, false);
+			if (id[0] != "0")
+			{
+				a->decendents.push_back(id[0]);//separate bots
+				a->dogdesc.push_back(id[1]);
+			}
 			a->indexes.push_back(i);
 			a->directions.push_back(true);
 			allVCG[VCGexistsDog(bots[i])]->predecessors.push_back(a->netid);
@@ -1087,9 +1131,12 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 			tops[i] = tops[i] + s;
 		}
 		else if (!bots[i].compare(net)) {
-			id = separateTrack(i, false);
-			a->predecessors.push_back(id[0]);
-			a->dogpred.push_back(id[1]);
+			id = separateTrack(i, true);
+			if (id[0] != "0")
+			{
+				a->predecessors.push_back(id[0]);
+				a->dogpred.push_back(id[1]);
+			}
 			a->indexes.push_back(i);
 			a->directions.push_back(false);
 			allVCG[VCGexistsDog(tops[i])]->decendents.push_back(a->netid);
@@ -1097,7 +1144,7 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 			bots[i] = bots[i] + s;
 		}
 	}
-	
+
 
 	stringstream ss1;
 	ss1 << (char)('A' + rem->dogcount + 1);
@@ -1109,31 +1156,68 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 
 	for (size_t i = dogind; i < tops.size(); i++) {
 		if (!tops[i].compare(net)) {
-			id = separateTrack(i, true);
-			b->decendents.push_back(id[0]);
-			b->dogdesc.push_back(id[1]);
+			id = separateTrack(i, false);
+			if (id[0] != "0")
+			{
+				b->decendents.push_back(id[0]);
+				b->dogdesc.push_back(id[1]);
+			}
 			b->indexes.push_back(i);
 			b->directions.push_back(true);
-			allVCG[VCGexistsDog(bots[i])]->predecessors.push_back(b->netid);
-			allVCG[VCGexistsDog(bots[i])]->dogpred.push_back(b->dogid);
+			if (bots[i] != "0")
+			{
+				allVCG[VCGexistsDog(bots[i])]->predecessors.push_back(b->netid);
+				allVCG[VCGexistsDog(bots[i])]->dogpred.push_back(b->dogid);
+			}
 			tops[i] = tops[i] + s;
 		}
 		else if (!bots[i].compare(net)) {
-			id = separateTrack(i, false);
-			b->predecessors.push_back(id[0]);
-			b->dogpred.push_back(id[1]);
+			id = separateTrack(i, true);
+			if (id[0] != "0")
+			{
+				b->predecessors.push_back(id[0]);
+				b->dogpred.push_back(id[1]);
+			}
 			b->indexes.push_back(i);
 			b->directions.push_back(false);
-			allVCG[VCGexistsDog(tops[i])]->decendents.push_back(b->netid);
-			allVCG[VCGexistsDog(tops[i])]->dogdesc.push_back(b->dogid);
+			if (tops[i] != "0") {
+				allVCG[VCGexistsDog(tops[i])]->decendents.push_back(b->netid);
+				allVCG[VCGexistsDog(tops[i])]->dogdesc.push_back(b->dogid);
+			}
 			bots[i] = bots[i] + s;
 		}
 	}
+	id = separateTrack(dogind, false);
+	allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(a->netid);
+	allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(b->netid);
+	allVCG[VCGexists(id[0], id[1])]->dogpred.push_back(a->dogid);
+	allVCG[VCGexists(id[0], id[1])]->dogpred.push_back(b->dogid);
+	a->decendents.push_back(id[0]);
+	a->dogdesc.push_back(id[1]);
+	b->decendents.push_back(id[0]);
+	b->dogdesc.push_back(id[1]);
+
+	id = separateTrack(dogind, true);
+	allVCG[VCGexists(id[0], id[1])]->decendents.push_back(a->netid);
+	allVCG[VCGexists(id[0], id[1])]->decendents.push_back(b->netid);
+	allVCG[VCGexists(id[0], id[1])]->dogdesc.push_back(a->dogid);
+	allVCG[VCGexists(id[0], id[1])]->dogdesc.push_back(b->dogid);
+	a->predecessors.push_back(id[0]);
+	a->dogpred.push_back(id[1]);
+	b->predecessors.push_back(id[0]);
+	b->dogpred.push_back(id[1]);
+
+	a->startind = rem->startind;
+	a->endind = dogind;
+	b->startind = dogind;
+	b->endind = rem->endind;
 
 	allVCG.push_back(a);
 	allVCG.push_back(b);
 	allVCG.erase(remove(allVCG.begin(), allVCG.end(), rem), allVCG.end());
 }
+#pragma endregion
+
 
 ///////////////////////////////////////////////////////////////////////
 //                             Printing								 //
@@ -1209,175 +1293,175 @@ void printToFile() {
 #pragma region OpenGL
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
-
-const char *vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"}\0";
-const char *fragmentShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-"}\n\0";
-
-int draw(void)
-{
-	// glfw: initialize and configure
-	// ------------------------------
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	// glfw window creation
-	// --------------------
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "YK Routing", NULL, NULL);
-	if (window == NULL)
-	{
-		std::cout << "Failed to create GLFW window" << std::endl;
-		glfwTerminate();
-		return -1;
-	}
-	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-	// glad: load all OpenGL function pointers
-	// ---------------------------------------
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-	{
-		std::cout << "Failed to initialize GLAD" << std::endl;
-		return -1;
-	}
-
-	// build and compile our shader program
-	// ------------------------------------
-	// vertex shader
-	int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	glCompileShader(vertexShader);
-	// check for shader compile errors
-	int success;
-	char infoLog[512];
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-	// fragment shader
-	int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-	glCompileShader(fragmentShader);
-	// check for shader compile errors
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-	// link shaders
-	int shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	// check for linking errors
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	if (!success) {
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	}
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
-
-	// set up vertex data (and buffer(s)) and configure vertex attributes
-	// ------------------------------------------------------------------
-	float vertices[] = {
-		-1.0f, -0.521f, 0.0f, // left  
-		0.22f, -0.521f, 0.0f, // right 
-		0.5f, -0.5f, 0.0f,  // top
-		0.5f, 0.5f, 0.0f
-	};
-
-	unsigned int VBO, VAO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-	glBindVertexArray(VAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-	glBindVertexArray(0);
-
-
-	// uncomment this call to draw in wireframe polygons.
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	// render loop
-	// -----------
-	while (!glfwWindowShouldClose(window))
-	{
-		// input
-		// -----
-		processInput(window);
-
-		// render
-		// ------
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		// draw our first triangle
-		glUseProgram(shaderProgram);
-		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-
-		glDrawArrays(GL_LINES, 0, 4);
-		// glBindVertexArray(0); // no need to unbind it every time 
-
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		// -------------------------------------------------------------------------------
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
-
-	// optional: de-allocate all resources once they've outlived their purpose:
-	// ------------------------------------------------------------------------
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
-
-	// glfw: terminate, clearing all previously allocated GLFW resources.
-	// ------------------------------------------------------------------
-	glfwTerminate();
-	return 0;
-}
-
-
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
-{
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-}
-
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	// make sure the viewport matches the new window dimensions; note that width and 
-	// height will be significantly larger than specified on retina displays.
-	glViewport(0, 0, width, height);
-}
+//const unsigned int SCR_WIDTH = 800;
+//const unsigned int SCR_HEIGHT = 600;
+//
+//const char *vertexShaderSource = "#version 330 core\n"
+//"layout (location = 0) in vec3 aPos;\n"
+//"void main()\n"
+//"{\n"
+//"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+//"}\0";
+//const char *fragmentShaderSource = "#version 330 core\n"
+//"out vec4 FragColor;\n"
+//"void main()\n"
+//"{\n"
+//"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+//"}\n\0";
+//
+//int draw(void)
+//{
+//	// glfw: initialize and configure
+//	// ------------------------------
+//	glfwInit();
+//	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+//	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+//	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+//
+//	// glfw window creation
+//	// --------------------
+//	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "YK Routing", NULL, NULL);
+//	if (window == NULL)
+//	{
+//		std::cout << "Failed to create GLFW window" << std::endl;
+//		glfwTerminate();
+//		return -1;
+//	}
+//	glfwMakeContextCurrent(window);
+//	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+//
+//	// glad: load all OpenGL function pointers
+//	// ---------------------------------------
+//	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+//	{
+//		std::cout << "Failed to initialize GLAD" << std::endl;
+//		return -1;
+//	}
+//
+//	// build and compile our shader program
+//	// ------------------------------------
+//	// vertex shader
+//	int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+//	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+//	glCompileShader(vertexShader);
+//	// check for shader compile errors
+//	int success;
+//	char infoLog[512];
+//	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+//	if (!success)
+//	{
+//		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+//		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+//	}
+//	// fragment shader
+//	int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+//	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+//	glCompileShader(fragmentShader);
+//	// check for shader compile errors
+//	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+//	if (!success)
+//	{
+//		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+//		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+//	}
+//	// link shaders
+//	int shaderProgram = glCreateProgram();
+//	glAttachShader(shaderProgram, vertexShader);
+//	glAttachShader(shaderProgram, fragmentShader);
+//	glLinkProgram(shaderProgram);
+//	// check for linking errors
+//	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+//	if (!success) {
+//		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+//		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+//	}
+//	glDeleteShader(vertexShader);
+//	glDeleteShader(fragmentShader);
+//
+//	// set up vertex data (and buffer(s)) and configure vertex attributes
+//	// ------------------------------------------------------------------
+//	float vertices[] = {
+//		-1.0f, -0.521f, 0.0f, // left  
+//		0.22f, -0.521f, 0.0f, // right 
+//		0.5f, -0.5f, 0.0f,  // top
+//		0.5f, 0.5f, 0.0f
+//	};
+//
+//	unsigned int VBO, VAO;
+//	glGenVertexArrays(1, &VAO);
+//	glGenBuffers(1, &VBO);
+//	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+//	glBindVertexArray(VAO);
+//
+//	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+//	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+//
+//	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+//	glEnableVertexAttribArray(0);
+//
+//	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+//	glBindBuffer(GL_ARRAY_BUFFER, 0);
+//
+//	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+//	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+//	glBindVertexArray(0);
+//
+//
+//	// uncomment this call to draw in wireframe polygons.
+//	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//
+//	// render loop
+//	// -----------
+//	while (!glfwWindowShouldClose(window))
+//	{
+//		// input
+//		// -----
+//		processInput(window);
+//
+//		// render
+//		// ------
+//		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+//		glClear(GL_COLOR_BUFFER_BIT);
+//
+//		// draw our first triangle
+//		glUseProgram(shaderProgram);
+//		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+//
+//		glDrawArrays(GL_LINES, 0, 4);
+//		// glBindVertexArray(0); // no need to unbind it every time 
+//
+//		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+//		// -------------------------------------------------------------------------------
+//		glfwSwapBuffers(window);
+//		glfwPollEvents();
+//	}
+//
+//	// optional: de-allocate all resources once they've outlived their purpose:
+//	// ------------------------------------------------------------------------
+//	glDeleteVertexArrays(1, &VAO);
+//	glDeleteBuffers(1, &VBO);
+//
+//	// glfw: terminate, clearing all previously allocated GLFW resources.
+//	// ------------------------------------------------------------------
+//	glfwTerminate();
+//	return 0;
+//}
+//
+//
+//// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+//// ---------------------------------------------------------------------------------------------------------
+//void processInput(GLFWwindow *window)
+//{
+//	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+//		glfwSetWindowShouldClose(window, true);
+//}
+//
+//// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+//// ---------------------------------------------------------------------------------------------
+//void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+//{
+//	// make sure the viewport matches the new window dimensions; note that width and 
+//	// height will be significantly larger than specified on retina displays.
+//	glViewport(0, 0, width, height);
+//}
 #pragma endregion
