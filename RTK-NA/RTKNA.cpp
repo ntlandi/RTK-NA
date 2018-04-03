@@ -13,7 +13,7 @@
 #include <ctime>
 #include <sstream>
 //#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+//#include <GLFW/glfw3.h>
 
 using namespace std;
 
@@ -80,8 +80,8 @@ void trackToString();
 void printToFile();
 void dogleg(vector<string>, vector<string>);
 void updateVCGDog(int, int, VCG*);
-void processInput(GLFWwindow *);
-void framebuffer_size_callback(GLFWwindow* , int , int);
+//void processInput(GLFWwindow *);
+//void framebuffer_size_callback(GLFWwindow* , int , int);
 int VCGexistsDog(string id);
 vector<string> separateTrack(int, bool);
 vector<string> separateTrack(string); 
@@ -685,6 +685,19 @@ void makeVCG() {
 			n->predecessors.push_back((tops[i]));
 			n->dogpred.push_back("");
 			allVCG.push_back(n);
+		}
+	}
+
+	for (size_t i = 0; i < netlist.size(); i++) {
+		if (VCGexists(to_string(netlist[i]->netnum), "") == -1) {
+			VCG *next = new VCG();
+
+			next->netid = to_string(netlist[i]->netnum);
+			next->dogid = "";
+			next->indexes = netlist[i]->indexes;
+			next->directions = netlist[i]->directions;
+
+			allVCG.push_back(next);
 		}
 	}
 
