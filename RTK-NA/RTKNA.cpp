@@ -88,7 +88,7 @@ vector<string> separateTrack(string);
 int findPred(vector<string>::iterator it, string net, string dog, int );
 int findDesc(vector<string>::iterator it, string net, string dog, int );
 void convertToNetDog();
-void doglegAll(vector<string> path, vector<string> dogpath);
+void doglegAll();
 void createDoglegVCG();
 #pragma endregion
 
@@ -100,14 +100,14 @@ int main(int argc, char* argv[])
 	string filepath, dog1;
 	getline(cin, filepath);
 
-	/*cout << "\nDoglegging? : \n";
-	getline(cin, dog1);*/
-	/*if (dog1 == "y" || dog1 == "Y" || dog1 == "1") {
+	cout << "\nDoglegging? : \n";
+	getline(cin, dog1);
+	if (dog1 == "y" || dog1 == "Y" || dog1 == "1") {
 		dog = true;
 	}
 	else {
 		dog = false;
-	}*/
+	}
 
 	clock_t start = clock();
 	parse(filepath);
@@ -115,6 +115,10 @@ int main(int argc, char* argv[])
 
 	//VCG 
 	makeVCG();
+
+	if (dog) {
+		doglegAll();
+	}
 
 	//Zoning Code
 
@@ -1010,9 +1014,9 @@ void dogleg(vector<string> path, vector<string> dogpath) {
 	updateVCGDog(index, dogindex, hold);
 }
 
-void doglegAll(vector<string> path, vector<string> dogpath) {
-	for (size_t i = 0; i < path.size(); i++) {
-		VCG *hold = allVCG[VCGexists(path[i], dogpath[i])];
+void doglegAll() {
+	for (size_t i = 0; i < allVCG.size(); i++) {
+		VCG *hold = allVCG[VCGexists(allVCG[i]->netid, allVCG[i]->dogid)];
 		if (hold->dogid == "")
 		{
 			for (size_t j = 0; j < hold->indexes.size(); j++) {
@@ -1042,7 +1046,20 @@ void doglegAll(vector<string> path, vector<string> dogpath) {
 }
 
 void createDoglegVCG() {
+	for (size_t i = 0; i < tops.size(); i++) {
+		VCG* holdtop = allVCG[VCGexistsDog(tops[i])];
+		VCG* holdbot = allVCG[VCGexistsDog(bots[i])];
 
+		if (findDesc(holdtop->decendents.begin, holdbot->netid, holdbot->dogid, VCGexistsDog(tops[i])) == -1) {
+			holdtop->decendents.push_back(holdbot->netid);
+			holdtop->dogdesc.push_back(holdbot->dogid);
+		}
+
+		if (findPred(holdbot->predecessors.begin, holdtop->netid, holdtop->dogid, VCGexistsDog(bots[i])) == -1) {
+			holdbot->predecessors.push_back(holdtop->netid);
+			holdbot->dogpred.push_back(holdtop->dogid);
+		}
+	}
 }
 
 int VCGexistsDog(string id) {
