@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 
 	//Zoning Code
 
-	zone = vector<vector<string>>(static_cast<int>(top.size()), vector<string>(20, "0"));
+	//zone = vector<vector<string>>(static_cast<int>(top.size()), vector<string>(20, "0"));
 	Zoning();
 	final_zone.resize(static_cast<int>(zone.size()));
 	Zone_Sort();
@@ -455,12 +455,12 @@ void Zoning() {
 	}
 
 	int p = 0;
-
+	zone.push_back(col[0]);
 
 	for (int k1 = 0; k1 < static_cast<int>(tops.size()) - 1; k1++) {
 		
 		if ((includes(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end())) || (includes(col[k1 + 1].begin(), col[k1 + 1].end(), col[k1].begin(), col[k1].end()))) {
-			//cout << "Subset";
+			//"Subset";
 			std::vector<string> temp_colunion(col[k1].size() + col[k1+1].size());
 			std::vector<string>::iterator it;
 			it = set_union(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end(), temp_colunion.begin());
@@ -470,24 +470,18 @@ void Zoning() {
 				zone[p] = temp_colunion;
 
 			}
-			else {
-				p++;
-				zone[p] = temp_colunion;
-			}
-			//zone[p] = (includes(zone[p].begin(), zone[p].end(), temp_colunion.begin(), temp_colunion.end())) ? zone[p] : temp_colunion;
-
+			
 		}
 		else {
-			//cout << "\n not a subset";
-			//p = (sub_count > 0) ? (p + 1) : p;
+			//"not a subset";
+			
 			p += 1;
-			zone[p] = col[k1 + 1];
+			zone.push_back(col[k1 + 1]);
 		}
 
 	}
 	zone.erase(zone.begin() + p+1, zone.end());
-	zone.erase(zone.begin()+0);
-	//cout << "P is " << p << endl;
+	
 	for (int k1 = 0; k1 < static_cast<int>(zone.size()); k1++) {
 		cout << endl;
 		cout << "Zone no" << (k1 + 1) << endl;
