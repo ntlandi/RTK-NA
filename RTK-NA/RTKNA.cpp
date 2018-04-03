@@ -461,17 +461,24 @@ void Zoning() {
 	int p = 0;
 
 
-	for (int k1 = 1; k1 < static_cast<int>(tops.size()) - 1; k1++) {
-		//if (k1== static_cast<int>(top.size()-1) {
-
+	for (int k1 = 0; k1 < static_cast<int>(tops.size()) - 1; k1++) {
+		
 		if ((includes(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end())) || (includes(col[k1 + 1].begin(), col[k1 + 1].end(), col[k1].begin(), col[k1].end()))) {
 			//cout << "Subset";
-			std::vector<string> temp_colunion(static_cast<int>(col[k1].size()) * 10);
+			std::vector<string> temp_colunion(col[k1].size() + col[k1+1].size());
 			std::vector<string>::iterator it;
 			it = set_union(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end(), temp_colunion.begin());
 			temp_colunion.resize(it - temp_colunion.begin());
 
-			zone[p] = (includes(zone[p].begin(), zone[p].end(), temp_colunion.begin(), temp_colunion.end())) ? zone[p] : temp_colunion;
+			if (includes(temp_colunion.begin(), temp_colunion.end(), zone[p].begin(), zone[p].end())) {
+				zone[p] = temp_colunion;
+
+			}
+			else {
+				p++;
+				zone[p] = temp_colunion;
+			}
+			//zone[p] = (includes(zone[p].begin(), zone[p].end(), temp_colunion.begin(), temp_colunion.end())) ? zone[p] : temp_colunion;
 
 		}
 		else {
@@ -482,7 +489,8 @@ void Zoning() {
 		}
 
 	}
-	zone.erase(zone.begin() + p + 1, zone.end());
+	zone.erase(zone.begin() + p+1, zone.end());
+	zone.erase(zone.begin()+0);
 	//cout << "P is " << p << endl;
 	for (int k1 = 0; k1 < static_cast<int>(zone.size()); k1++) {
 		cout << endl;
