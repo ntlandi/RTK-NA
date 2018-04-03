@@ -98,8 +98,8 @@ int main(int argc, char* argv[])
 	string filepath, dog1;
 	getline(cin, filepath);
 
-	cout << "\nDoglegging? : \n";
-	getline(cin, dog1);
+	/*cout << "\nDoglegging? : \n";
+	getline(cin, dog1);*/
 	/*if (dog1 == "y" || dog1 == "Y" || dog1 == "1") {
 		dog = true;
 	}
@@ -831,7 +831,11 @@ void parse(string fileloc) {
 
 	while (index < line.length()) {
 		index = line.find(" ", (size_t)previndex);
-		top.push_back(stoi(line.substr(previndex, index - previndex)));
+		if (previndex < line.length())
+		{
+			top.push_back(stoi(line.substr(previndex, index - previndex)));
+		}
+		
 		previndex = index + 1;
 	}
 
@@ -840,7 +844,11 @@ void parse(string fileloc) {
 	getline(file, line);
 	while (index < line.length()) {
 		index = line.find(" ", (size_t)previndex);
-		bot.push_back(stoi(line.substr(previndex, index - previndex)));
+		if (previndex < line.length())
+		{
+			bot.push_back(stoi(line.substr(previndex, index - previndex)));
+		}
+		
 		previndex = index + 1;
 	}
 }
@@ -901,12 +909,10 @@ void arraytonet() {
 	sort(netlist.begin(), netlist.end(), sortNet);
 }
 
-
 //accesory function to sort the netlist by netnum
 bool sortNet(const net *a, const net *b) {
 	return a->netnum < b->netnum;
 }
-
 
 //checks to see if there is an existing net with netnum net
 int findExistingNet(int net) {
@@ -1307,6 +1313,7 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 //                             Printing								 //
 ///////////////////////////////////////////////////////////////////////
 
+#pragma region Printing
 vector<string> VCGParse(string s) {
 	vector<string> nets;
 	int index = 0, previndex = 0;
@@ -1350,7 +1357,7 @@ void printToFile() {
 
 	sort(allVCG.begin(), allVCG.end(), sortVCG);
 
-	for(size_t i = 0; i < allVCG.size(); i++) {
+	for (size_t i = 0; i < allVCG.size(); i++) {
 		string s = allVCG[i]->netid;
 
 		nets = VCGParse(s);
@@ -1358,9 +1365,9 @@ void printToFile() {
 		for (size_t j = 0; j < nets.size(); j++) {
 			netind = getNetlistInd(stoi(nets[j]));
 
-			f << (to_string(netlist[netind]->netnum) + " " );
-			f << ("s " + to_string(netlist[netind]->startind) + " " );
-			f << ("e " + to_string(netlist[netind]->endind)+ " ");
+			f << (to_string(netlist[netind]->netnum) + " ");
+			f << ("s " + to_string(netlist[netind]->startind) + " ");
+			f << ("e " + to_string(netlist[netind]->endind) + " ");
 			f << ("i " + vectorToString(netlist[netind]->indexes));
 			f << ("d " + vectorToString(netlist[netind]->directions) + " ");
 			f << "\n";
@@ -1369,6 +1376,8 @@ void printToFile() {
 	}
 	f.close();
 }
+#pragma endregion
+
 
 ///////////////////////////////////////////////////////////////////////
 //                             OpenGL								 //
