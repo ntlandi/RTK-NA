@@ -88,6 +88,8 @@ vector<string> separateTrack(string);
 int findPred(vector<string>::iterator it, string net, string dog, int );
 int findDesc(vector<string>::iterator it, string net, string dog, int );
 void convertToNetDog();
+void doglegAll(vector<string> path, vector<string> dogpath);
+void createDoglegVCG();
 #pragma endregion
 
 
@@ -1008,15 +1010,40 @@ void dogleg(vector<string> path, vector<string> dogpath) {
 	updateVCGDog(index, dogindex, hold);
 }
 
-//void doglegAll(vector<string> path, vector<string> dogpath) {
-//	for (size_t i = 0; i < path.size(); i++) {
-//		VCG *hold = allVCG[VCGexists(path[i], dogpath[i])];
-//		for (size_t j = 0; j < hold->indexes.size(); j++) {
-//			VCG *next = new VCG();
-//			next->netid = 
-//		}
-//	}
-//}
+void doglegAll(vector<string> path, vector<string> dogpath) {
+	for (size_t i = 0; i < path.size(); i++) {
+		VCG *hold = allVCG[VCGexists(path[i], dogpath[i])];
+		if (hold->dogid == "")
+		{
+			for (size_t j = 0; j < hold->indexes.size(); j++) {
+				VCG *next = new VCG();
+				next->netid = hold->netid;
+				stringstream ss;
+				ss << ('A' + j);
+				ss >> next->dogid;
+
+				next->indexes.push_back(hold->indexes[j]);
+				next->directions.push_back(hold->directions[j]);
+				
+				if (hold->directions[j]) {
+					tops[hold->indexes[j]] = (next->netid + next->dogid);
+				}
+				else {
+					bots[hold->indexes[j]] = (next->netid + next->dogid);
+				}
+				allVCG.push_back(next);
+			}
+
+			allVCG.erase(remove(allVCG.begin(), allVCG.end(), hold), allVCG.end());
+		}
+	}
+
+	createDoglegVCG();
+}
+
+void createDoglegVCG() {
+
+}
 
 int VCGexistsDog(string id) {
 	int i = 0;
