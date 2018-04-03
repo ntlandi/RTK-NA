@@ -1,44 +1,8 @@
 // RTKNA.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
-#include <cstdio>
-#include <vector>
-#include <algorithm>
-#include <string>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <set>
-#include <ctime>
-#include <sstream>
-//#include <glad/glad.h>
-//#include <GLFW/glfw3.h>
 
-using namespace std;
-
-struct net {
-	vector<int> indexes;
-	vector<bool> directions;
-	int netnum;
-	int doglegs = 0;
-	int counter = 0;
-	int startind, endind;
-};
-
-struct VCG {
-	string netid;
-	int startind, endind;
-	string dogid = "";
-	vector<string> decendents, predecessors,dogdesc,dogpred;
-	int distanceToSource = 0;
-	int distanceToSink = 0;
-	vector<int> indexes;
-	vector<bool> directions;
-	int dogcount = 0;
-};
-
-
+#include "RTKheader.hpp"
 vector<int> top;
 vector<int> bot;
 vector<vector<string>> zone;
@@ -53,45 +17,6 @@ vector<VCG*> allVCG, source, sink, mergedVCG;
 bool dog, merging;
 vector<string> tops, bots, L, Ldog;
 vector<int> zoneEnd;
-
-#pragma region methods
-void parse(string);
-void arraytonet();
-int findExistingNet(int);
-void makeVCG();
-void Zoning();
-int VCGexists(string, string);
-//void transientRemoval();
-void Zone_Sort();
-void Zone_union();
-void Zone_diff_union();
-void sourceAndSink();
-bool findDistance();
-bool distFromSource(string, string, int, vector<string>, vector<string>);
-void distFromSink(string, string, int);
-int Merge();
-vector<string> f(vector<string>, vector<string>);
-vector<string> g(vector<string>, vector<string>, vector<string>);
-void updateVCG(vector<string> a, vector<string> b);
-void updateZones(vector<string>, vector<string>);
-bool sortNet(const net *a, const net *b);
-vector<string> zoneConvertToStringAll(string);
-void trackToString();
-void printToFile();
-void dogleg(vector<string>, vector<string>);
-void updateVCGDog(int, int, VCG*);
-//void processInput(GLFWwindow *);
-//void framebuffer_size_callback(GLFWwindow* , int , int);
-int VCGexistsDog(string id);
-vector<string> separateTrack(int, bool);
-vector<string> separateTrack(string); 
-int findPred(vector<string>::iterator it, string net, string dog, int );
-int findDesc(vector<string>::iterator it, string net, string dog, int );
-void convertToNetDog();
-void doglegAll();
-void createDoglegVCG();
-#pragma endregion
-
 
 
 int main(int argc, char* argv[])
@@ -294,7 +219,6 @@ vector<string> f(vector<string> Q, vector<string> N) {
 	return high;
 }
 
-
 vector<string> g(vector<string> P, vector<string> E, vector<string> m) {
 	double C = 100;
 	double lowest = 100000;
@@ -343,8 +267,9 @@ void updateVCG(vector<string> a,  vector<string> b) {
 	for (size_t i = 0; i < allVCG.size(); i++) {
 		//if any occurance of a in desc
 		int descind, predind;
+#pragma region Replacement Block
 		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a[0]) != allVCG[i]->decendents.end() && find(allVCG[i]->dogdesc.begin(), allVCG[i]->dogdesc.end(), a[1]) != allVCG[i]->dogdesc.end() && allVCG[i]->decendents.size() > 0)
-		{	
+		{
 			while ((descind = findDesc(allVCG[i]->decendents.begin(), a[0], a[1], i)) != -1) {
 				allVCG[i]->decendents.erase(allVCG[i]->decendents.begin() + descind);
 				allVCG[i]->dogdesc.erase(allVCG[i]->dogdesc.begin() + descind);
@@ -358,7 +283,7 @@ void updateVCG(vector<string> a,  vector<string> b) {
 		}
 
 		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b[0]) != allVCG[i]->decendents.end() && find(allVCG[i]->dogdesc.begin(), allVCG[i]->dogdesc.end(), b[1]) != allVCG[i]->dogdesc.end() && allVCG[i]->decendents.size() > 0)
-		{	
+		{
 			while ((descind = findDesc(allVCG[i]->decendents.begin(), b[0], b[1], i)) != -1) {
 
 				allVCG[i]->decendents.erase(allVCG[i]->decendents.begin() + descind);
@@ -374,7 +299,7 @@ void updateVCG(vector<string> a,  vector<string> b) {
 		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a[0]) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0 && find(allVCG[i]->dogpred.begin(), allVCG[i]->dogpred.end(), a[1]) != allVCG[i]->dogpred.end())
 		{
 
-			while ( (predind = findPred(allVCG[i]->predecessors.begin(), a[0], a[1], i)) != -1) {
+			while ((predind = findPred(allVCG[i]->predecessors.begin(), a[0], a[1], i)) != -1) {
 
 				allVCG[i]->predecessors.erase(allVCG[i]->predecessors.begin() + predind);
 				allVCG[i]->dogpred.erase(allVCG[i]->dogpred.begin() + predind);
@@ -389,7 +314,7 @@ void updateVCG(vector<string> a,  vector<string> b) {
 		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b[0]) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0 && find(allVCG[i]->dogpred.begin(), allVCG[i]->dogpred.end(), b[1]) != allVCG[i]->dogpred.end())
 		{
 
-			while (( predind = findPred(allVCG[i]->predecessors.begin(), b[0], b[1], i)) != -1) {
+			while ((predind = findPred(allVCG[i]->predecessors.begin(), b[0], b[1], i)) != -1) {
 
 				allVCG[i]->predecessors.erase(allVCG[i]->predecessors.begin() + predind);
 				allVCG[i]->dogpred.erase(allVCG[i]->dogpred.begin() + predind);
@@ -402,7 +327,10 @@ void updateVCG(vector<string> a,  vector<string> b) {
 		}
 
 	}
+#pragma endregion
 
+
+#pragma region new VCG object creation
 	VCG *combine = new VCG();
 	combine->decendents = newdesc;
 	combine->predecessors = newpred;
@@ -410,24 +338,24 @@ void updateVCG(vector<string> a,  vector<string> b) {
 	combine->dogpred = newdogpred;
 	combine->netid = a[0] + "," + b[0];
 	combine->dogid = (a[1].empty() ? " " : a[1]) + "," + (b[1].empty() ? " " : b[1]);
-	combine->distanceToSink = max(allVCG[VCGexists(a[0],a[1])]->distanceToSink, allVCG[VCGexists(b[0],b[1])]->distanceToSink);
-	combine->distanceToSource = max(allVCG[VCGexists(a[0],a[1])]->distanceToSource, allVCG[VCGexists(b[0],b[1])]->distanceToSource);
-	combine->startind = min(allVCG[VCGexists(a[0],a[1])]->startind, allVCG[VCGexists(b[0],b[1])]->startind);
-	combine->endind = max(allVCG[VCGexists(a[0],a[1])]->endind, allVCG[VCGexists(b[0],b[1])]->endind);
+	combine->distanceToSink = max(allVCG[VCGexists(a[0], a[1])]->distanceToSink, allVCG[VCGexists(b[0], b[1])]->distanceToSink);
+	combine->distanceToSource = max(allVCG[VCGexists(a[0], a[1])]->distanceToSource, allVCG[VCGexists(b[0], b[1])]->distanceToSource);
+	combine->startind = min(allVCG[VCGexists(a[0], a[1])]->startind, allVCG[VCGexists(b[0], b[1])]->startind);
+	combine->endind = max(allVCG[VCGexists(a[0], a[1])]->endind, allVCG[VCGexists(b[0], b[1])]->endind);
 
 	if (a[1].find(',') == a[1].npos)
 	{
-		mergedVCG.push_back(allVCG[VCGexists(a[0],a[1])]);
+		mergedVCG.push_back(allVCG[VCGexists(a[0], a[1])]);
 	}
 	if (b[1].find(',') == b[1].npos)
 	{
-		mergedVCG.push_back(allVCG[VCGexists(b[0],b[1])]);
+		mergedVCG.push_back(allVCG[VCGexists(b[0], b[1])]);
 	}
+#pragma endregion
 
-	
-
-	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(a[0],a[1])]), allVCG.end());
-	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(b[0],b[1])]), allVCG.end());
+#pragma region Removal of desc and pred that contain a or b in new VCG
+	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(a[0], a[1])]), allVCG.end());
+	allVCG.erase(remove(allVCG.begin(), allVCG.end(), allVCG[VCGexists(b[0], b[1])]), allVCG.end());
 	allVCG.push_back(combine);
 
 	int d;
@@ -447,6 +375,8 @@ void updateVCG(vector<string> a,  vector<string> b) {
 		combine->predecessors.erase(combine->predecessors.begin() + d);
 		combine->dogpred.erase(combine->dogpred.begin() + d);
 	}
+#pragma endregion
+
 }
 
 void updateZones(vector<string> a, vector<string> b) {
@@ -1050,12 +980,12 @@ void createDoglegVCG() {
 		VCG* holdtop = allVCG[VCGexistsDog(tops[i])];
 		VCG* holdbot = allVCG[VCGexistsDog(bots[i])];
 
-		if (findDesc(holdtop->decendents.begin, holdbot->netid, holdbot->dogid, VCGexistsDog(tops[i])) == -1) {
+		if (findDesc(holdtop->decendents.begin(), holdbot->netid, holdbot->dogid, VCGexistsDog(tops[i])) == -1) {
 			holdtop->decendents.push_back(holdbot->netid);
 			holdtop->dogdesc.push_back(holdbot->dogid);
 		}
 
-		if (findPred(holdbot->predecessors.begin, holdtop->netid, holdtop->dogid, VCGexistsDog(bots[i])) == -1) {
+		if (findPred(holdbot->predecessors.begin(), holdtop->netid, holdtop->dogid, VCGexistsDog(bots[i])) == -1) {
 			holdbot->predecessors.push_back(holdtop->netid);
 			holdbot->dogpred.push_back(holdtop->dogid);
 		}
@@ -1335,24 +1265,24 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 		}
 	}
 	id = separateTrack(dogind, false);
-	/*allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(a->netid);
+	allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(a->netid);
 	allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(b->netid);
 	allVCG[VCGexists(id[0], id[1])]->dogpred.push_back(a->dogid);
-	allVCG[VCGexists(id[0], id[1])]->dogpred.push_back(b->dogid);*/
-	/*a->decendents.push_back(id[0]);
+	allVCG[VCGexists(id[0], id[1])]->dogpred.push_back(b->dogid);
+	a->decendents.push_back(id[0]);
 	a->dogdesc.push_back(id[1]);
 	b->decendents.push_back(id[0]);
-	b->dogdesc.push_back(id[1]);*/
+	b->dogdesc.push_back(id[1]);
 
 	id = separateTrack(dogind, true);
-	/*allVCG[VCGexists(id[0], id[1])]->decendents.push_back(a->netid);
+	allVCG[VCGexists(id[0], id[1])]->decendents.push_back(a->netid);
 	allVCG[VCGexists(id[0], id[1])]->decendents.push_back(b->netid);
 	allVCG[VCGexists(id[0], id[1])]->dogdesc.push_back(a->dogid);
-	allVCG[VCGexists(id[0], id[1])]->dogdesc.push_back(b->dogid);*/
-	/*a->predecessors.push_back(id[0]);
+	allVCG[VCGexists(id[0], id[1])]->dogdesc.push_back(b->dogid);
+	a->predecessors.push_back(id[0]);
 	a->dogpred.push_back(id[1]);
 	b->predecessors.push_back(id[0]);
-	b->dogpred.push_back(id[1]);*/
+	b->dogpred.push_back(id[1]);
 
 	a->startind = rem->startind;
 	a->endind = dogind;
