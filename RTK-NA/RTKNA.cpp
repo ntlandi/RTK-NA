@@ -580,14 +580,14 @@ void Zone_Sort() {
 	vector<string> last_zone(10);
 
 	for (int l1 = 0; l1 < static_cast<int>(zone.size()) - 1; l1++) {
-		vector<string> temp_zone_diff(10);
+		vector<string> temp_zone_diff(zone[l1].size() + zone[l1+1].size());
 
 		it1 = set_difference(zone[l1].begin(), zone[l1].end(), zone[l1 + 1].begin(), zone[l1 + 1].end(), temp_zone_diff.begin());
 		temp_zone_diff.resize(it1 - temp_zone_diff.begin());
 
 		final_zone[l1] = temp_zone_diff;
 
-		vector<string> temp_zone_diff1(10);
+		vector<string> temp_zone_diff1(zone[l1].size() + zone[l1 + 1].size());
 
 		if (l1 == 0) {
 			ini_zone[l1] = zone[l1];
