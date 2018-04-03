@@ -92,9 +92,6 @@ bool pathToSource(string netid, string dogid, int index) {
 			if (!pathToSource(netid, dogid, VCGexists(allVCG[index]->predecessors[i], allVCG[index]->dogpred[i]))) {
 				return false;
 			}
-			else {
-				return true;
-			}
 		}
 	}
 	if (origindex == index)
@@ -229,7 +226,7 @@ vector<string> g(vector<string> P, vector<string> E, vector<string> m) {
 			- sqrt(allVCG[VCGexists((m[0]), m[1])]->distanceToSource * allVCG[VCGexists((P[i]), E[i])]->distanceToSource) - sqrt(allVCG[VCGexists((m[0]), m[1])]->distanceToSink * allVCG[VCGexists((P[i]), E[i])]->distanceToSink);
 
 		origindex = VCGexists(m[0], m[1]);
-		if (hold < lowest && pathToSink(P[i], E[i], origindex) && pathToSource(P[i], E[i], origindex)) {
+		if (hold < lowest && pathToSink(P[i], E[i], origindex) && pathToSource(P[i], E[i], (origindex))) {
 			lowest = hold;
 			if (low.empty())
 			{
@@ -248,7 +245,6 @@ vector<string> g(vector<string> P, vector<string> E, vector<string> m) {
 
 void updateVCG(vector<string> a,  vector<string> b) {
 	vector<string> newdesc, newpred, newdogdesc, newdogpred;
-	
 
 #pragma region desc
 	newdesc = allVCG[VCGexists(a[0],a[1])]->decendents;
