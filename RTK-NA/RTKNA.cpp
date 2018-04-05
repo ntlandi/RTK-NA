@@ -968,11 +968,11 @@ void doglegAll() {
 		VCG *hold = allVCG[VCGexists(allVCG[i]->netid, allVCG[i]->dogid)];
 		if (hold->dogid == "")
 		{
-			for (size_t j = 0; j < hold->indexes.size(); j++) {
+			for (size_t j = 1; j < hold->indexes.size(); j++) {
 				VCG *next = new VCG();
 				next->netid = hold->netid;
 				stringstream ss;
-				ss << ('A' + j);
+				ss << (char)('A' + j - 1);
 				ss >> next->dogid;
 
 				next->indexes.push_back(hold->indexes[j]);
@@ -1188,6 +1188,7 @@ void lexiDog(string netid, string dogid) {
 void updateVCGDog(int ind, int dogind, VCG* rem) {
 	VCG *a = new VCG();
 	VCG *b = new VCG();
+	bool skip = false;
 
 	if (rem->dogid != "") {
 		lexiDog(rem->netid, rem->dogid);
@@ -1222,34 +1223,51 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 
 	vector<string> id;
 	for (size_t i = 0; i < dogind; i++) {
+		
 		if (!tops[i].compare(net)) {
 			id = separateTrack(i, false);
-			if (id[0] != "0")
+			
+			if (id[0] != "0" && id[0].compare(rem->netid))
 			{
 				a->decendents.push_back(id[0]);//separate bots
 				a->dogdesc.push_back(id[1]);
 			}
+			
 			a->indexes.push_back(i);
 			a->directions.push_back(true);
-			allVCG[VCGexistsDog(bots[i])]->predecessors.push_back(a->netid);
-			allVCG[VCGexistsDog(bots[i])]->dogpred.push_back(a->dogid);
-			tops[i] = a->netid + s; // update tops
+			if (bots[i] != tops[i])
+			{
+				allVCG[VCGexistsDog(bots[i])]->predecessors.push_back(a->netid);
+				allVCG[VCGexistsDog(bots[i])]->dogpred.push_back(a->dogid);
+			}
+
+			
+			tops[i] = a->netid + s;
+			
+			// update tops
 		}
-		else if (!bots[i].compare(net)) {
+		if (!bots[i].compare(net)) {
 			id = separateTrack(i, true);
-			if (id[0] != "0")
+			if (id[0] != "0" && id[0].compare(rem->netid))
 			{
 				a->predecessors.push_back(id[0]);
 				a->dogpred.push_back(id[1]);
 			}
 			a->indexes.push_back(i);
 			a->directions.push_back(false);
+			
 			allVCG[VCGexistsDog(tops[i])]->decendents.push_back(a->netid);
 			allVCG[VCGexistsDog(tops[i])]->dogdesc.push_back(a->dogid);
+			
 			bots[i] = a->netid + s; //update bots
+		}
+		if (skip) {
+			tops[i] = a->netid + s;
+			skip = false;
 		}
 	}
 
+	skip = false;
 
 	stringstream ss1;
 	ss1 << (char)('A' + rem->dogcount + 1);
@@ -1262,7 +1280,8 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 	for (size_t i = dogind; i < tops.size(); i++) {
 		if (!tops[i].compare(net)) {
 			id = separateTrack(i, false);
-			if (id[0] != "0")
+			
+			if (id[0] != "0" && id[0].compare(rem->netid))
 			{
 				b->decendents.push_back(id[0]);
 				b->dogdesc.push_back(id[1]);
@@ -1274,11 +1293,18 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 				allVCG[VCGexistsDog(bots[i])]->predecessors.push_back(b->netid);
 				allVCG[VCGexistsDog(bots[i])]->dogpred.push_back(b->dogid);
 			}
-			tops[i] = b->netid + s; //update tops
+
+			if (tops[i].compare(bots[i]))
+			{
+				tops[i] = b->netid + s;
+			}
+			else {
+				skip = true;
+			}//update tops
 		}
-		else if (!bots[i].compare(net)) {
+		if (!bots[i].compare(net)) {
 			id = separateTrack(i, true);
-			if (id[0] != "0")
+			if (id[0] != "0" && id[0].compare(rem->netid))
 			{
 				b->predecessors.push_back(id[0]);
 				b->dogpred.push_back(id[1]);
@@ -1291,9 +1317,14 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 			}
 			bots[i] = b->netid + s; //update bots
 		}
+
+		if (skip) {
+			tops[i] = b->netid + s;
+			skip = false;
+		}
 	}
 	id = separateTrack(dogind, false);
-	if (id[0].compare("0"))
+	if (id[0].compare("0") && tops[dogind] != bots[dogind])
 	{
 		allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(a->netid);
 		allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(b->netid);
@@ -1306,7 +1337,7 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 	}
 
 	id = separateTrack(dogind, true);
-	if (id[0].compare("0"))
+	if (id[0].compare("0") && tops[dogind] != bots[dogind])
 	{
 		allVCG[VCGexists(id[0], id[1])]->decendents.push_back(a->netid);
 		allVCG[VCGexists(id[0], id[1])]->decendents.push_back(b->netid);
