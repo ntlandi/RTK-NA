@@ -959,7 +959,11 @@ trynewdog:
 			break;
 		}
 	}
-
+	// Dont dogleg if end index of net to be doglegged is the dogindex
+	if (dogindex== allVCG[VCGexists(path.at(count), dogpath.at(count))]->endind) {
+		count++;
+		goto trynewdog;
+	}
 	updateVCGDog(index, dogindex, hold);
 }
 
@@ -1113,6 +1117,7 @@ vector<string> separateTrack(string id) {
 void lexiDog(string netid, string dogid) {
 	vector<VCG*> ret;
 
+	//Nets to be updated after dogleg
 	for (size_t i = 0; i < allVCG.size(); i++) {
 		if (allVCG[i]->netid == netid && allVCG[i]->dogid > dogid) {
 			ret.push_back(allVCG[i]);
