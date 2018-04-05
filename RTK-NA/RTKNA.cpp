@@ -724,8 +724,8 @@ bool distFromSource(string netid, string dogid, int counter, vector<string> path
 			{
 				return false;
 			}
-			int index = path.erase(remove(path.begin(), path.end(), allVCG[VCGexists(netid, dogid)]->decendents[i]), path.end()) - path.begin();
-			dogpath.erase(remove(dogpath.begin() + index, dogpath.end(), allVCG[VCGexists(netid, dogid)]->dogdesc[i]), dogpath.end());
+			path.pop_back();
+			dogpath.pop_back();
 		}
 	}
 
@@ -888,33 +888,49 @@ int findExistingNet(int net) {
 void dogleg(vector<string> path, vector<string> dogpath) {
 	int index = -1;
 	bool direction;
+	bool direcflag = false;
+	int count = 0;
 
 	//find index at which cycle begins
-	VCG *hold = allVCG[VCGexists(path.at(0), dogpath.at(0))];
-	VCG *under = allVCG[VCGexists(path.at(1), dogpath.at(1))];
-	VCG *above = allVCG[VCGexists(path.at(path.size() - 1), dogpath.at(path.size() - 1))];
+trynewdog:
+
+
+	if (count > path.size() - 2) {
+		cout << "WOOF WOOF, Cyclic path cannot be resolved:\n " + path[0] + dogpath[0] + " and " + path[1] + dogpath[1] + " cannot be doglegged because they have no space";
+		exit(-1);
+	}
+	VCG *hold = allVCG[VCGexists(path.at(count), dogpath.at(count))];
+	VCG *under = allVCG[VCGexists(path.at(count + 1), dogpath.at(count + 1))];
+	VCG *above = allVCG[VCGexists(path.at(count >= 1 ? count - 1 : path.size() - 1), dogpath.at(count >= 1 ? count - 1 : path.size() - 1))];
+
 
 	for (size_t j = 0; j < hold->indexes.size(); j++) {
 		if (hold->directions[j]) {
 			//check  for dogid
 
-			if (bots[hold->indexes[j]] == (under->netid + under->dogid)) {
+			if (bots[hold->indexes[j]] == (under->netid + under->dogid) && tops[j].compare(bots[j])) {
 				index = hold->indexes[j];
 				direction = true;
+				direcflag = true;
 				break;
 			}
 
 		}
 		if (!hold->directions[j]) {
 			//check for dogid
-			if (tops[hold->indexes[j]] == (above->netid + above->dogid)) {
+			if (tops[hold->indexes[j]] == (above->netid + above->dogid) && tops[j].compare(bots[j])) {
 				index = hold->indexes[j];
 				direction = false;
+				direcflag = true;
 				break;
 			}
 		}
 	}
 
+	if (!direcflag) {
+		count++;
+		goto trynewdog;
+	}
 
 	// find possible dogleg index
 	int offender, dogindex;
@@ -927,7 +943,7 @@ void dogleg(vector<string> path, vector<string> dogpath) {
 
 	for (int i = index + 1; i < top.size(); i++) {
 		if (direction) {
-			if (offender == top[i]) {
+			if (offender == top[i] || !tops[i].compare(bots[i])) {
 				offender = bot[i];
 				continue;
 			}
@@ -935,7 +951,7 @@ void dogleg(vector<string> path, vector<string> dogpath) {
 			break;
 		}
 		else {
-			if (offender == bot[i]) {
+			if (offender == bot[i] || !tops[i].compare(bots[i])) {
 				offender = top[i];
 				continue;
 			}
@@ -1139,7 +1155,9 @@ void lexiDog(string netid, string dogid) {
 					string s;
 					ss >> s;
 					allVCG[i]->dogpred[predind] = s;
+					
 				}
+				predind++;
 			}
 			while ((descind = findDesc(allVCG[i]->decendents.begin() + descind, v->netid, v->dogid, i)) != -1) {
 				if (descind > 0) {
@@ -1150,7 +1168,9 @@ void lexiDog(string netid, string dogid) {
 					string s;
 					ss >> s;
 					allVCG[i]->dogdesc[descind] = s;
+					
 				}
+				descind++;
 			}
 		}
 
@@ -1273,24 +1293,30 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 		}
 	}
 	id = separateTrack(dogind, false);
-	allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(a->netid);
-	allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(b->netid);
-	allVCG[VCGexists(id[0], id[1])]->dogpred.push_back(a->dogid);
-	allVCG[VCGexists(id[0], id[1])]->dogpred.push_back(b->dogid);
-	a->decendents.push_back(id[0]);
-	a->dogdesc.push_back(id[1]);
-	b->decendents.push_back(id[0]);
-	b->dogdesc.push_back(id[1]);
+	if (id[0].compare("0"))
+	{
+		allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(a->netid);
+		allVCG[VCGexists(id[0], id[1])]->predecessors.push_back(b->netid);
+		allVCG[VCGexists(id[0], id[1])]->dogpred.push_back(a->dogid);
+		allVCG[VCGexists(id[0], id[1])]->dogpred.push_back(b->dogid);
+		a->decendents.push_back(id[0]);
+		a->dogdesc.push_back(id[1]);
+		b->decendents.push_back(id[0]);
+		b->dogdesc.push_back(id[1]);
+	}
 
 	id = separateTrack(dogind, true);
-	allVCG[VCGexists(id[0], id[1])]->decendents.push_back(a->netid);
-	allVCG[VCGexists(id[0], id[1])]->decendents.push_back(b->netid);
-	allVCG[VCGexists(id[0], id[1])]->dogdesc.push_back(a->dogid);
-	allVCG[VCGexists(id[0], id[1])]->dogdesc.push_back(b->dogid);
-	a->predecessors.push_back(id[0]);
-	a->dogpred.push_back(id[1]);
-	b->predecessors.push_back(id[0]);
-	b->dogpred.push_back(id[1]);
+	if (id[0].compare("0"))
+	{
+		allVCG[VCGexists(id[0], id[1])]->decendents.push_back(a->netid);
+		allVCG[VCGexists(id[0], id[1])]->decendents.push_back(b->netid);
+		allVCG[VCGexists(id[0], id[1])]->dogdesc.push_back(a->dogid);
+		allVCG[VCGexists(id[0], id[1])]->dogdesc.push_back(b->dogid);
+		a->predecessors.push_back(id[0]);
+		a->dogpred.push_back(id[1]);
+		b->predecessors.push_back(id[0]);
+		b->dogpred.push_back(id[1]);
+	}
 
 	a->startind = rem->startind;
 	a->endind = dogind;
