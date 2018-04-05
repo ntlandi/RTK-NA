@@ -1124,8 +1124,9 @@ void lexiDog(string netid, string dogid) {
 		if (VCGexistsDog(tops[i]) != -1)
 		{ // Change all dogleg names after the net which is being doglegged 
 			if ((allVCG[VCGexistsDog(tops[i])]->netid == netid) && (allVCG[VCGexistsDog(tops[i])]->dogid > dogid)) {
+				vector<string> id = separateTrack(i, true);
 				stringstream ss;
-				ss << (char)(dogid[0] + 1);
+				ss << (char)(id[1][0] + 1);
 				string s;
 				ss >> s;
 				tops[i] = netid + s;
@@ -1133,8 +1134,9 @@ void lexiDog(string netid, string dogid) {
 		}
 		if (VCGexistsDog(bots[i]) != -1){
 			if (allVCG[VCGexistsDog(bots[i])]->netid == netid && allVCG[VCGexistsDog(bots[i])]->dogid > dogid) {
+				vector<string> id = separateTrack(i, false);
 				stringstream ss;
-				ss << (char)(dogid[0] + 1);
+				ss << (char)(id[1][0] + 1);
 				string s;
 				ss >> s;
 				bots[i] = netid + s;
