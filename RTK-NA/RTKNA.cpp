@@ -14,13 +14,15 @@ vector<vector<string>> ininet, finalnet, inidog, finaldog;
 net * first;
 vector<net*> netlist;
 vector<VCG*> allVCG, source, sink, mergedVCG;
-bool dog, merging;
-vector<string> tops, bots, L, Ldog;
+bool dog, merging, doglegAlldone;
+vector<string> tops, bots, L, Ldog, ignore;
 vector<int> zoneEnd;
+int dogcounter;
 
 
 int main(int argc, char* argv[])
 {
+	dogcounter = 0;
 	merging = false;
 	string filepath, dog1;
 	getline(cin, filepath);
@@ -696,24 +698,30 @@ for (size_t i = 0; i < sink.size(); i++) {
 	}
 }
 
+int findPath(vector<string> path, vector<string> dogpath, string desc, string dogdesc) {
+	for (size_t i = 0; i < path.size(); i++) {
+		if (path[i] == desc && dogpath[i] == dogdesc) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 bool distFromSource(string netid, string dogid, int counter, vector<string> path, vector<string> dogpath) {
 	bool flag = true;
 	if (counter > allVCG[VCGexists(netid, dogid)]->distanceToSource) {
 		allVCG[VCGexists(netid, dogid)]->distanceToSource = counter;
 	}
 	
-	for (size_t i = 0; i < allVCG[VCGexists(netid, dogid)]->decendents.size(); i++) {
-		if (find(path.begin(), path.end(), allVCG[VCGexists(netid, dogid)]->decendents[i]) != path.end() && find(dogpath.begin(), dogpath.end(), allVCG[VCGexists(netid, dogid)]->dogdesc[i]) != dogpath.end()) {
-			if (1)
-			{	
-				vector<string>::iterator it = find(path.begin(), path.end(), allVCG[VCGexists(netid, dogid)]->decendents[i]);
-				int ind = it - path.begin();
-				path.erase(path.begin(), find(path.begin(), path.end(), allVCG[VCGexists(netid, dogid)]->decendents[i]));
-				dogpath.erase(dogpath.begin(), dogpath.begin()+ind);
-				dogleg(path, dogpath);
-				flag = false;
-				break;
-			}
+	int index;
+	for (size_t i = 0; i < allVCG[(index = VCGexists(netid, dogid))]->decendents.size(); i++) {
+		int index;
+		if ((index = findPath(path, dogpath, allVCG[(index = VCGexists(netid, dogid))]->decendents[i], allVCG[(index = VCGexists(netid, dogid))]->dogdesc[i])) != -1) {
+			path.erase(path.begin(), path.begin() + index);
+			dogpath.erase(dogpath.begin(), dogpath.begin()+index);
+			dogleg(path, dogpath);
+			flag = false;
+			break;
 		}
 		path.push_back(allVCG[VCGexists(netid, dogid)]->decendents[i]);
 		dogpath.push_back(allVCG[VCGexists(netid, dogid)]->dogdesc[i]);
@@ -1059,6 +1067,7 @@ void doglegAllHelper(int netindex) {
 		bot1 = allVCG[VCGexists(botVec[0], botVec[1])];
 		bot2 = allVCG[VCGexists(botVec[0], botVec[2])];
 	}
+#pragma region Desc and Pred
 
 	if (bot1 != nullptr && top1 != nullptr)
 	{
@@ -1097,7 +1106,7 @@ void doglegAllHelper(int netindex) {
 		bot2->predecessors.push_back(top1->netid);
 		bot2->dogpred.push_back(top1->dogid);
 	}
-
+#pragma endregion
 }
 
 void doglegAll() {
@@ -1142,20 +1151,159 @@ void doglegAll() {
 			allVCG.erase(remove(allVCG.begin(), allVCG.end(), hold), allVCG.end());
 		}
 		else {
+			dogcounter++;
 			counter++;
 		}
 	}
 
 	createDoglegVCG();
+	doglegAlldone = true;
 }
 
 void createDoglegVCG() {
-
 	for (size_t i = 0; i < tops.size(); i++) {
 		doglegAllHelper(i);
 	}
+
+	for (int i = 0; i < dogcounter; i++)
+	{
+		VCG *hold = allVCG[i];
+		hold->decendents.clear();
+		hold->dogdesc.clear();
+		hold->predecessors.clear();
+		hold->dogpred.clear();
+
+		for (size_t j = 0; j < hold->indexes.size(); j++)
+		{
+			vector<string> topVec, botVec;
+			int holdind = 0, ind = 0;
+			int netindex = hold->indexes[j];
+			string line1 = tops[netindex], line2 = bots[netindex];
+
+			bool flag1 = false, flag2 = false;
+			for (char c : line1) {
+				if (c == '0' && holdind == 0) {
+					holdind++;
+					break;
+				}
+				if (c >= 65) {
+					if (flag1)
+					{
+						flag2 = true;
+						break;
+					}
+					flag1 = true;
+				}
+				if (!flag1)
+				{
+					holdind++;
+				}
+			}
+
+			if (flag2) {
+				topVec.push_back(line1.substr(0, holdind));
+				if (topVec[0].compare("0"))
+				{
+					topVec.push_back(line1.substr(holdind, 1));
+					topVec.push_back(line1.substr(holdind + 1, 1));
+				}
+			}
+			else {
+				topVec.push_back(line1.substr(0, holdind));
+				if (topVec[0].compare("0"))
+				{
+					topVec.push_back(line1.substr(holdind, 1));
+				}
+			}
+
+			holdind = 0;
+			flag1 = false;
+			flag2 = false;
+
+			for (char c : line2) {
+				if (c == '0' && holdind == 0) {
+					holdind++;
+					break;
+				}
+				if (c >= 65) {
+					if (flag1)
+					{
+						flag2 = true;
+						break;
+					}
+					flag1 = true;
+				}
+				if (!flag1)
+				{
+					holdind++;
+				}
+			}
+
+			if (flag2) {
+				botVec.push_back(line2.substr(0, holdind));
+				if (botVec[0].compare("0"))
+				{
+					botVec.push_back(line2.substr(holdind, 1));
+					botVec.push_back(line2.substr(holdind + 1, 1));
+				}
+			}
+			else {
+				botVec.push_back(line2.substr(0, holdind));
+				if (botVec[0].compare("0"))
+				{
+					botVec.push_back(line2.substr(holdind, 1));
+				}
+			}
+
+			if (j >= hold->directions.size()) {
+				if (botVec.size() > 1)
+				{
+					hold->decendents.push_back(botVec[0]);
+					hold->dogdesc.push_back(botVec[1]);
+					if (botVec.size() == 3) {
+						hold->decendents.push_back(botVec[0]);
+						hold->dogdesc.push_back(botVec[2]);
+					}
+				}
+				if (topVec.size() > 1)
+				{
+					hold->predecessors.push_back(topVec[0]);
+					hold->dogpred.push_back(topVec[1]);
+					if (topVec.size() == 3) {
+						hold->predecessors.push_back(topVec[0]);
+						hold->dogpred.push_back(topVec[2]);
+					}
+				}
+				continue;
+			}
+
+			if (hold->directions[j]) {
+				if (botVec.size() > 1)
+				{
+					hold->decendents.push_back(botVec[0]);
+					hold->dogdesc.push_back(botVec[1]);
+					if (botVec.size() == 3) {
+						hold->decendents.push_back(botVec[0]);
+						hold->dogdesc.push_back(botVec[2]);
+					}
+				}
+			}
+			else {
+				if (topVec.size() > 1)
+				{
+					hold->predecessors.push_back(topVec[0]);
+					hold->dogpred.push_back(topVec[1]);
+					if (topVec.size() == 3) {
+						hold->predecessors.push_back(topVec[0]);
+						hold->dogpred.push_back(topVec[2]);
+					}
+				}
+			}
+		}
+	}
 }
 
+#pragma region +1 Helper Methods
 int VCGexistsDog(string id) {
 	int i = 0;
 	bool flag = false;
@@ -1242,7 +1390,7 @@ vector<string> separateTrack(string id) {
 	}
 
 	ret.push_back(id.substr(0, i));
-	
+
 	if (flag)
 	{
 		ret.push_back(id.substr(i));
@@ -1254,6 +1402,7 @@ vector<string> separateTrack(string id) {
 
 	return ret;
 }
+#pragma endregion
 
 void lexiDog(string netid, string dogid) {
 	vector<VCG*> ret;
@@ -1499,8 +1648,10 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 
 	a->startind = rem->startind;
 	a->endind = dogind;
+	a->indexes.push_back(dogind);
 	b->startind = dogind;
 	b->endind = rem->endind;
+	b->indexes.push_back(dogind);
 
 	allVCG.push_back(a);
 	allVCG.push_back(b);
