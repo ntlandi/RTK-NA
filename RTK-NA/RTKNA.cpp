@@ -33,28 +33,24 @@ int main(int argc, char* argv[])
 	else {
 		dog = false;
 	}
-
 	clock_t start = clock();
 	parse(filepath);
 	arraytonet();
 
 	//VCG 
 	makeVCG();
-
 	if (dog) {
 		doglegAll();
 	}
 
 	//Zoning Code
 
-	//zone = vector<vector<string>>(static_cast<int>(top.size()), vector<string>(20, "0"));
 	Zoning();
 	final_zone.resize(static_cast<int>(zone.size()));
 	Zone_Sort();
 	Zone_union();
 	Zone_diff_union();
 	convertToNetDog();
-	//zoneEnd = zoneEnds();      //Pending fix if needed
  	
 
 	while (Merge() > 0);
@@ -967,6 +963,127 @@ trynewdog:
 	updateVCGDog(index, dogindex, hold);
 }
 
+void doglegAllHelper(int netindex) {
+
+	vector<string> topVec,botVec;
+	
+#pragma region determine if double or single dog
+	int holdind = 0, ind = 0;
+	string line1 = tops[netindex], line2 = bots[netindex];
+
+	bool flag1 = false, flag2 = false;
+	for (char c : line1) {
+		if (c >= 65) {
+			if (flag1)
+			{
+				flag2 = true;
+				break;
+			}
+			flag1 = true;
+		}
+		if (!flag1)
+		{
+			holdind++;
+		}
+	}
+
+	if (flag2) {
+		topVec.push_back(line1.substr(0, holdind));
+		topVec.push_back(line1.substr(holdind, 1));
+		topVec.push_back(line1.substr(holdind + 1, 1));
+	}
+	else {
+		topVec.push_back(line1.substr(0, holdind));
+		topVec.push_back(line1.substr(holdind, 1));
+	}
+
+	holdind = 0;
+	flag1 = false;
+	flag2 = false;
+
+	for (char c : line2) {
+		if (c >= 65) {
+			if (flag1)
+			{
+				flag2 = true;
+				break;
+			}
+			flag1 = true;
+		}
+		if (!flag1)
+		{
+			holdind++;
+		}
+	}
+
+	if (flag2) {
+		botVec.push_back(line2.substr(0, holdind));
+		botVec.push_back(line2.substr(holdind, 1));
+		botVec.push_back(line2.substr(holdind + 1, 1));
+	}
+	else {
+		botVec.push_back(line2.substr(0, holdind));
+		botVec.push_back(line2.substr(holdind, 1));
+	}
+#pragma endregion
+
+	//get assoc VCG objects
+	VCG *top1 = nullptr, *top2 = nullptr, *bot1 = nullptr, *bot2 = nullptr;
+
+	if (topVec.size() == 2) {
+		top1 = allVCG[VCGexists(topVec[0], topVec[1])];
+	}
+	else {
+		top1 = allVCG[VCGexists(topVec[0], topVec[1])];
+		top2 = allVCG[VCGexists(topVec[0], topVec[2])];
+	}
+
+	if (botVec.size() == 2) {
+		bot1 = allVCG[VCGexists(botVec[0], botVec[1])];
+		
+	}
+	else {
+		bot1 = allVCG[VCGexists(botVec[0], botVec[1])];
+		bot2 = allVCG[VCGexists(botVec[0], botVec[2])];
+	}
+
+	top1->decendents.push_back(bot1->netid);
+	top1->dogdesc.push_back(bot1->dogid);
+	bot1->predecessors.push_back(top1->netid);
+	bot1->dogpred.push_back(top1->dogid);
+
+	if (top2 != nullptr && bot2 != nullptr) {
+		top1->decendents.push_back(bot2->netid);
+		top1->dogdesc.push_back(bot2->dogid);
+		bot1->predecessors.push_back(top2->netid);
+		bot1->dogpred.push_back(top2->dogid);
+
+		top2->decendents.push_back(bot1->netid);
+		top2->dogdesc.push_back(bot1->dogid);
+		bot2->predecessors.push_back(top1->netid);
+		bot2->dogpred.push_back(top1->dogid);
+		top2->decendents.push_back(bot2->netid);
+		top2->dogdesc.push_back(bot2->dogid);
+		bot2->predecessors.push_back(top2->netid);
+		bot2->dogpred.push_back(top2->dogid);
+	}
+	else if (top2 != nullptr) {
+		bot1->predecessors.push_back(top2->netid);
+		bot1->dogpred.push_back(top2->dogid);
+
+		top2->decendents.push_back(bot1->netid);
+		top2->dogdesc.push_back(bot1->dogid);
+	}
+	else if (bot2 != nullptr) {
+		top1->decendents.push_back(bot2->netid);
+		top1->dogdesc.push_back(bot2->dogid);
+
+		bot2->predecessors.push_back(top1->netid);
+		bot2->dogpred.push_back(top1->dogid);
+	}
+
+}
+
 void doglegAll() {
 	for (size_t i = 0; i < allVCG.size(); i++) {
 		VCG *hold = allVCG[VCGexists(allVCG[i]->netid, allVCG[i]->dogid)];
@@ -983,10 +1100,17 @@ void doglegAll() {
 				next->directions.push_back(hold->directions[j]);
 				
 				if (hold->directions[j]) {
-					tops[hold->indexes[j]] = (next->netid + next->dogid);
+					tops[hold->indexes[j]] += next->dogid;
 				}
 				else {
-					bots[hold->indexes[j]] = (next->netid + next->dogid);
+					bots[hold->indexes[j]] += (next->dogid);
+				}
+
+				if (hold->directions[j - 1]) {
+					tops[hold->indexes[j-1]] += next->dogid;
+				}
+				else {
+					bots[hold->indexes[j-1]] += (next->dogid);
 				}
 				allVCG.push_back(next);
 			}
@@ -999,19 +1123,16 @@ void doglegAll() {
 }
 
 void createDoglegVCG() {
+
+	for (size_t i = 0; i < allVCG.size(); i++) {
+		allVCG[i]->decendents.clear();
+		allVCG[i]->dogdesc.clear();
+		allVCG[i]->predecessors.clear();
+		allVCG[i]->dogpred.clear();
+	}
+
 	for (size_t i = 0; i < tops.size(); i++) {
-		VCG* holdtop = allVCG[VCGexistsDog(tops[i])];
-		VCG* holdbot = allVCG[VCGexistsDog(bots[i])];
-
-		if (findDesc(holdtop->decendents.begin(), holdbot->netid, holdbot->dogid, VCGexistsDog(tops[i])) == -1) {
-			holdtop->decendents.push_back(holdbot->netid);
-			holdtop->dogdesc.push_back(holdbot->dogid);
-		}
-
-		if (findPred(holdbot->predecessors.begin(), holdtop->netid, holdtop->dogid, VCGexistsDog(bots[i])) == -1) {
-			holdbot->predecessors.push_back(holdtop->netid);
-			holdbot->dogpred.push_back(holdtop->dogid);
-		}
+		doglegAllHelper(i);
 	}
 }
 
