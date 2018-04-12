@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 
 	while (Merge() > 0);
 
-	//makedrawvertex();
+	makedrawvertex();
 	printf("\n\n%d", clock() - start);
 	printToFile();
 	return 0;
