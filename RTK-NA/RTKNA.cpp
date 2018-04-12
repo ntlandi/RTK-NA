@@ -3,46 +3,47 @@
 
 
 #include "RTKheader.hpp"
-vector<int> top;
-vector<int> bot;
-vector<vector<string>> zone;
-vector<vector<string>> final_zone;
-vector<string> union_zone;
-vector<string> union_zone_diff, *predpath;
-vector<vector<string>> ini_zone;
-vector<vector<string>> ininet, finalnet, inidog, finaldog;
+vector<int> top, bot, zoneEnd;
+vector<vector<string>> zone, final_zone, ini_zone, ininet, inidog, finalnet, finaldog;
+vector<string> union_zone_diff, *predpath, union_zone, tops,bots, L, Ldog, ignore, netsatvertex;
 net * first;
 vector<net*> netlist;
 vector<VCG*> allVCG, source, sink, mergedVCG;
-bool dog, merging, doglegAlldone;
-vector<string> tops, bots, L, Ldog, ignore;
-vector<int> zoneEnd;
+
+bool dog, merging, doglegAlldone, outputFlag;
 int dogcounter;
 vector<float> netvertex;
-vector<string> netsatvertex;
-vector<float> topvertices;
-vector<float> botvertices;
-bool sortheighthelper(VCG *, VCG *);
-void makedrawvertex();
-int mergedVCGexists(string , string);
-int netexistsonTrack(string , string );
 
 int main(int argc, char* argv[])
 {
 	predpath = new vector<string>();
 	dogcounter = 0;
-	merging = false;
+	merging = false, outputFlag = false, dog = false;
 	string filepath, dog1;
-	getline(cin, filepath);
 
-	cout << "\nDoglegging? : \n";
-	getline(cin, dog1);
-	if (dog1 == "y" || dog1 == "Y" || dog1 == "1") {
+	//getline(cin, filepath);
+
+	for (int i = 0; i < argc; i++) {
+		if (argv[i] == "-o") {
+			outputFlag = true;
+		}
+		if (argv[i] == "-d") {
+			dog = true;
+		}
+		if (i == argc - 1) {
+			filepath = argv[i];
+		}
+	}
+
+	//cout << "\nDoglegging? : \n";
+	//getline(cin, dog1);
+	/*if (dog1 == "y" || dog1 == "Y" || dog1 == "1") {
 		dog = true;
 	}
 	else {
 		dog = false;
-	}
+	}*/
+
 	clock_t start = clock();
 	parse(filepath);
 	arraytonet();
@@ -64,13 +65,16 @@ int main(int argc, char* argv[])
 	Zone_diff_union();
 	convertToNetDog();
  	
-	sort(allVCG.begin(), allVCG.end(), sortheighthelper);
 	while (Merge() > 0);
-	makedrawvertex();
-	draw();
+
 
 	printf("\n\n%d", clock() - start);
-	printToFile();
+	makedrawvertex();
+	draw();
+	if (outputFlag)
+	{
+		printToFile();
+	}
 	return 0;
 }
 
@@ -743,6 +747,10 @@ bool distFromSource(string netid, string dogid, int counter, vector<string> path
 	for (size_t i = 0; i < allVCG[(index = VCGexists(netid, dogid))]->decendents.size(); i++) {
 		int index;
 		if ((index = findPath(path, dogpath, allVCG[(index = VCGexists(netid, dogid))]->decendents[i], allVCG[(index = VCGexists(netid, dogid))]->dogdesc[i])) != -1) {
+			if (merging) {
+				cout << "ERROR: Cycle created by merging";
+				exit(-2);
+			}
 			path.erase(path.begin(), path.begin() + index);
 			dogpath.erase(dogpath.begin(), dogpath.begin()+index);
 			dogleg(path, dogpath);
@@ -942,7 +950,7 @@ trynewdog:
 	VCG *above = allVCG[VCGexists(path.at(count >= 1 ? count - 1 : path.size() - 1), dogpath.at(count >= 1 ? count - 1 : path.size() - 1))];
 
 
-	for (size_t j = 0; j < hold->indexes.size(); j++) {
+	for (size_t j = 0; j < hold->directions.size(); j++) {
 		if (hold->directions[j]) {
 			//check  for dogid
 
@@ -1711,6 +1719,15 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 	allVCG.push_back(b);
 	allVCG.erase(remove(allVCG.begin(), allVCG.end(), rem), allVCG.end());
 }
+
+int findIn(vector<string> v1, vector<string> v2, string a, string b) {
+	for (size_t i = 0; i < v1.size(); i++) {
+		if (v1[i] == a && v2[i] == b) {
+			return i;
+		}
+	}
+	return -1;
+}
 #pragma endregion
 
 
@@ -1873,7 +1890,7 @@ void updateVertnetvertex(VCG* net, vector<string> netdog,bool flag)
 	float maxX = tops.size()*1.2; // to scale between 0 - 1
 	float maxY = allVCG.size()*1.2;
 
-	for (size_t i = 0; i < net->indexes.size(); i++) {
+	for (size_t i = 0; i < net->directions.size(); i++) {
 
 		if (net->directions[i]) {
 			if (flag)
