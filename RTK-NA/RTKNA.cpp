@@ -18,31 +18,22 @@ int main(int argc, char* argv[])
 {
 	predpath = new vector<string>();
 	dogcounter = 0;
-	merging = false, outputFlag = false, dog = false;
+	merging = false, outputFlag = false, dog = true;
 	string filepath, dog1;
 
 	//getline(cin, filepath);
 
-	for (int i = 0; i < argc; i++) {
-		if (argv[i] == "-o") {
+	for (int i = 1; i < argc; i++) {
+		if (argv[i] == "o") {
 			outputFlag = true;
 		}
-		if (argv[i] == "-d") {
+		if (argv[i] == "d") {
 			dog = true;
 		}
 		if (i == argc - 1) {
 			filepath = argv[i];
 		}
 	}
-
-	//cout << "\nDoglegging? : \n";
-	//getline(cin, dog1);
-	/*if (dog1 == "y" || dog1 == "Y" || dog1 == "1") {
-		dog = true;
-	}
-	else {
-		dog = false;
-	}*/
 
 	clock_t start = clock();
 	parse(filepath);
@@ -75,7 +66,7 @@ int main(int argc, char* argv[])
 	{
 		printToFile();
 	}
-	return 0;
+ 	return 0;
 }
 
 int origindex;
@@ -239,7 +230,7 @@ vector<string> f(vector<string> Q, vector<string> N) {
 
 vector<string> g(vector<string> P, vector<string> E, vector<string> m) {
 	double C = 100;
-	double lowest = 100000;
+	double lowest =100000;
 	vector<string> low;
 	for (size_t i = 0; i < P.size(); i++) {
 		double hold = C * (max(allVCG[VCGexists(P[i], E[i])]->distanceToSource, allVCG[VCGexists((m[0]), m[1])]->distanceToSource) + max(allVCG[VCGexists((P[i]), E[i])]->distanceToSink, allVCG[VCGexists((m[0]), m[1])]->distanceToSink)
@@ -264,29 +255,51 @@ vector<string> g(vector<string> P, vector<string> E, vector<string> m) {
 	return low;
 }
 
+vector<vector<string>> unique(vector<string> a1, vector<string> a2, vector<string> b1, vector<string> b2) {
+	vector<string> reta = a1, retb = a2;
+	bool flag = false;
+
+	for (size_t i = 0; i < b1.size(); i++) {
+		for (size_t j = 0; j < reta.size(); j++) {
+			if (reta[j] == b1[i] && retb[j] == b2[i]) {
+				flag = true;
+				break;
+			}
+		}
+		if (!flag) {
+			reta.push_back(b1[i]);
+			retb.push_back(b2[i]);
+		}
+		flag = false;
+	}
+
+	vector<vector<string>> ret;
+	ret.push_back(reta);
+	ret.push_back(retb);
+	return ret;
+}
+
 void updateVCG(vector<string> a,  vector<string> b) {
 	vector<string> newdesc, newpred, newdogdesc, newdogpred;
 	
 
 #pragma region desc
-	newdesc = allVCG[VCGexists(a[0],a[1])]->decendents;
-	newdesc.insert(newdesc.begin(), allVCG[VCGexists(b[0],b[1])]->decendents.begin(), allVCG[VCGexists(b[0],b[1])]->decendents.end());
+	vector<vector<string>> s = unique(allVCG[VCGexists(a[0], a[1])]->decendents, allVCG[VCGexists(a[0], a[1])]->dogdesc, allVCG[VCGexists(b[0], b[1])]->decendents, allVCG[VCGexists(b[0], b[1])]->dogdesc);
+	newdesc = s[0];
+	newdogdesc = s[1];
 
-	newpred = allVCG[VCGexists(a[0],a[1])]->predecessors;
-	newpred.insert(newpred.begin(), allVCG[VCGexists(b[0],b[1])]->predecessors.begin(), allVCG[VCGexists(b[0],b[1])]->predecessors.end());
-
-	newdogdesc = allVCG[VCGexists(a[0],a[1])]->dogdesc;
-	newdogdesc.insert(newdogdesc.begin(), allVCG[VCGexists(b[0],b[1])]->dogdesc.begin(), allVCG[VCGexists(b[0],b[1])]->dogdesc.end());
-
-	newdogpred = allVCG[VCGexists(a[0],a[1])]->dogpred;
-	newdogpred.insert(newdogpred.begin(), allVCG[VCGexists(b[0],b[1])]->dogpred.begin(), allVCG[VCGexists(b[0],b[1])]->dogpred.end());
+	s = unique(allVCG[VCGexists(a[0], a[1])]->predecessors, allVCG[VCGexists(a[0], a[1])]->dogpred, allVCG[VCGexists(b[0], b[1])]->predecessors, allVCG[VCGexists(b[0], b[1])]->dogpred);
+	newpred = s[0];
+	newdogpred = s[1];
 #pragma endregion
 
 	for (size_t i = 0; i < allVCG.size(); i++) {
 		//if any occurance of a in desc
 		int descind, predind;
+
 #pragma region Replacement Block
-		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), a[0]) != allVCG[i]->decendents.end() && find(allVCG[i]->dogdesc.begin(), allVCG[i]->dogdesc.end(), a[1]) != allVCG[i]->dogdesc.end() && allVCG[i]->decendents.size() > 0)
+
+		if (findDesc(allVCG[i]->decendents.begin(), a[0], a[1], i) != -1)
 		{
 			while ((descind = findDesc(allVCG[i]->decendents.begin(), a[0], a[1], i)) != -1) {
 				allVCG[i]->decendents.erase(allVCG[i]->decendents.begin() + descind);
@@ -300,7 +313,7 @@ void updateVCG(vector<string> a,  vector<string> b) {
 			}
 		}
 
-		if (find(allVCG[i]->decendents.begin(), allVCG[i]->decendents.end(), b[0]) != allVCG[i]->decendents.end() && find(allVCG[i]->dogdesc.begin(), allVCG[i]->dogdesc.end(), b[1]) != allVCG[i]->dogdesc.end() && allVCG[i]->decendents.size() > 0)
+		if (findDesc(allVCG[i]->decendents.begin(), b[0], b[1], i) != -1)
 		{
 			while ((descind = findDesc(allVCG[i]->decendents.begin(), b[0], b[1], i)) != -1) {
 
@@ -314,9 +327,8 @@ void updateVCG(vector<string> a,  vector<string> b) {
 			}
 		}
 
-		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), a[0]) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0 && find(allVCG[i]->dogpred.begin(), allVCG[i]->dogpred.end(), a[1]) != allVCG[i]->dogpred.end())
+		if (findPred(allVCG[i]->predecessors.begin(), a[0], a[1], i) != -1)
 		{
-
 			while ((predind = findPred(allVCG[i]->predecessors.begin(), a[0], a[1], i)) != -1) {
 
 				allVCG[i]->predecessors.erase(allVCG[i]->predecessors.begin() + predind);
@@ -329,9 +341,8 @@ void updateVCG(vector<string> a,  vector<string> b) {
 			}
 		}
 
-		if (find(allVCG[i]->predecessors.begin(), allVCG[i]->predecessors.end(), b[0]) != allVCG[i]->predecessors.end() && allVCG[i]->predecessors.size() > 0 && find(allVCG[i]->dogpred.begin(), allVCG[i]->dogpred.end(), b[1]) != allVCG[i]->dogpred.end())
+		if (findPred(allVCG[i]->predecessors.begin(), b[0], b[1], i) != -1)
 		{
-
 			while ((predind = findPred(allVCG[i]->predecessors.begin(), b[0], b[1], i)) != -1) {
 
 				allVCG[i]->predecessors.erase(allVCG[i]->predecessors.begin() + predind);
@@ -1108,6 +1119,7 @@ void doglegAllHelper(int netindex) {
 		bot1 = allVCG[VCGexists(botVec[0], botVec[1])];
 		bot2 = allVCG[VCGexists(botVec[0], botVec[2])];
 	}
+
 #pragma region Desc and Pred
 
 	if (bot1 != nullptr && top1 != nullptr && bot1->netid != top1->netid && top1->dogid != bot1->dogid)
@@ -1270,6 +1282,8 @@ void createDoglegVCG() {
 			vector<string> topVec = getVec(tops[netindex]), botVec = getVec(bots[netindex]);
 
 			if (j >= hold->directions.size()) {
+				
+
 				if (botVec.size() > 1)
 				{
 					hold->decendents.push_back(botVec[0]);
@@ -1338,20 +1352,35 @@ void createDoglegVCG() {
 			if (hold->directions[j]) {
 				if (botVec.size() > 1)
 				{
+					VCG *other = allVCG[VCGexists(botVec[0], botVec[1])];
+					other->predecessors.push_back(hold->netid);
+					other->dogpred.push_back(hold->dogid);
 					hold->decendents.push_back(botVec[0]);
 					hold->dogdesc.push_back(botVec[1]);
 					if (botVec.size() == 3) {
+						other = allVCG[VCGexists(botVec[0], botVec[2])];
+						other->predecessors.push_back(hold->netid);
+						other->dogpred.push_back(hold->dogid);
 						hold->decendents.push_back(botVec[0]);
 						hold->dogdesc.push_back(botVec[2]);
 					}
+
+					
+
 				}
 			}
 			else {
 				if (topVec.size() > 1)
 				{
+					VCG *other = allVCG[VCGexists(topVec[0], topVec[1])];
+					other->decendents.push_back(hold->netid);
+					other->dogdesc.push_back(hold->dogid);
 					hold->predecessors.push_back(topVec[0]);
 					hold->dogpred.push_back(topVec[1]);
 					if (topVec.size() == 3) {
+						other = allVCG[VCGexists(topVec[0], topVec[2])];
+						other->decendents.push_back(hold->netid);
+						other->dogdesc.push_back(hold->dogid);
 						hold->predecessors.push_back(topVec[0]);
 						hold->dogpred.push_back(topVec[2]);
 					}
