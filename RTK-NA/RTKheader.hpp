@@ -10,8 +10,8 @@
 #include <set>
 #include <ctime>
 #include <sstream>
-//#include <glad/glad.h>
-//#include <GLFW/glfw3.h>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 using namespace std;
 
@@ -62,8 +62,9 @@ void trackToString();
 void printToFile();
 void dogleg(vector<string>, vector<string>);
 void updateVCGDog(int, int, VCG*);
-//void processInput(GLFWwindow *);
-//void framebuffer_size_callback(GLFWwindow* , int , int);
+int draw(void);
+void processInput(GLFWwindow *);
+void framebuffer_size_callback(GLFWwindow* , int , int);
 int VCGexistsDog(string id);
 vector<string> separateTrack(int, bool);
 vector<string> separateTrack(string);
