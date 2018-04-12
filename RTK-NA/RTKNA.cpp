@@ -1160,6 +1160,48 @@ void doglegAll() {
 	doglegAlldone = true;
 }
 
+vector<string> getVec(string line) {
+	vector<string> vec;
+	int holdind = 0;
+	bool flag1 = false, flag2 = false;
+	for (char c : line) {
+		if (c == '0' && holdind == 0) {
+			holdind++;
+			break;
+		}
+		if (c >= 65) {
+			if (flag1)
+			{
+				flag2 = true;
+				break;
+			}
+			flag1 = true;
+		}
+		if (!flag1)
+		{
+			holdind++;
+		}
+	}
+
+	if (flag2) {
+		vec.push_back(line.substr(0, holdind));
+		if (vec[0].compare("0"))
+		{
+			vec.push_back(line.substr(holdind, 1));
+			vec.push_back(line.substr(holdind + 1, 1));
+		}
+	}
+	else {
+		vec.push_back(line.substr(0, holdind));
+		if (vec[0].compare("0"))
+		{
+			vec.push_back(line.substr(holdind, 1));
+		}
+	}
+
+	return vec;
+}
+
 void createDoglegVCG() {
 	for (size_t i = 0; i < tops.size(); i++) {
 		doglegAllHelper(i);
@@ -1175,85 +1217,10 @@ void createDoglegVCG() {
 
 		for (size_t j = 0; j < hold->indexes.size(); j++)
 		{
-			vector<string> topVec, botVec;
+			
 			int holdind = 0, ind = 0;
 			int netindex = hold->indexes[j];
-			string line1 = tops[netindex], line2 = bots[netindex];
-
-			bool flag1 = false, flag2 = false;
-			for (char c : line1) {
-				if (c == '0' && holdind == 0) {
-					holdind++;
-					break;
-				}
-				if (c >= 65) {
-					if (flag1)
-					{
-						flag2 = true;
-						break;
-					}
-					flag1 = true;
-				}
-				if (!flag1)
-				{
-					holdind++;
-				}
-			}
-
-			if (flag2) {
-				topVec.push_back(line1.substr(0, holdind));
-				if (topVec[0].compare("0"))
-				{
-					topVec.push_back(line1.substr(holdind, 1));
-					topVec.push_back(line1.substr(holdind + 1, 1));
-				}
-			}
-			else {
-				topVec.push_back(line1.substr(0, holdind));
-				if (topVec[0].compare("0"))
-				{
-					topVec.push_back(line1.substr(holdind, 1));
-				}
-			}
-
-			holdind = 0;
-			flag1 = false;
-			flag2 = false;
-
-			for (char c : line2) {
-				if (c == '0' && holdind == 0) {
-					holdind++;
-					break;
-				}
-				if (c >= 65) {
-					if (flag1)
-					{
-						flag2 = true;
-						break;
-					}
-					flag1 = true;
-				}
-				if (!flag1)
-				{
-					holdind++;
-				}
-			}
-
-			if (flag2) {
-				botVec.push_back(line2.substr(0, holdind));
-				if (botVec[0].compare("0"))
-				{
-					botVec.push_back(line2.substr(holdind, 1));
-					botVec.push_back(line2.substr(holdind + 1, 1));
-				}
-			}
-			else {
-				botVec.push_back(line2.substr(0, holdind));
-				if (botVec[0].compare("0"))
-				{
-					botVec.push_back(line2.substr(holdind, 1));
-				}
-			}
+			vector<string> topVec = getVec(tops[netindex]), botVec = getVec(bots[netindex]);
 
 			if (j >= hold->directions.size()) {
 				if (botVec.size() > 1)
@@ -1272,6 +1239,50 @@ void createDoglegVCG() {
 					if (topVec.size() == 3) {
 						hold->predecessors.push_back(topVec[0]);
 						hold->dogpred.push_back(topVec[2]);
+					}
+				}
+
+				vector<string> vec = getVec(tops[hold->indexes[j]]);
+
+				if (vec.size() > 0) {
+					if (vec.size() == 2) {
+						int allind = VCGexists(vec[0], vec[1]);
+
+						allVCG[allind]->decendents.push_back(hold->netid);
+						allVCG[allind]->dogdesc.push_back(hold->dogid);
+					}
+					else if (vec.size() == 3) {
+						int allind = VCGexists(vec[0], vec[1]);
+
+						allVCG[allind]->decendents.push_back(hold->netid);
+						allVCG[allind]->dogdesc.push_back(hold->dogid);
+
+						allind = VCGexists(vec[0], vec[2]);
+
+						allVCG[allind]->decendents.push_back(hold->netid);
+						allVCG[allind]->dogdesc.push_back(hold->dogid);
+					}
+				}
+
+				vec = getVec(bots[hold->indexes[j]]);
+
+				if (vec.size() > 0) {
+					if (vec.size() == 2) {
+						int allind = VCGexists(vec[0], vec[1]);
+
+						allVCG[allind]->predecessors.push_back(hold->netid);
+						allVCG[allind]->dogpred.push_back(hold->dogid);
+					}
+					else if (vec.size() == 3) {
+						int allind = VCGexists(vec[0], vec[1]);
+
+						allVCG[allind]->predecessors.push_back(hold->netid);
+						allVCG[allind]->dogpred.push_back(hold->dogid);
+
+						allind = VCGexists(vec[0], vec[2]);
+
+						allVCG[allind]->predecessors.push_back(hold->netid);
+						allVCG[allind]->dogpred.push_back(hold->dogid);
 					}
 				}
 				continue;
@@ -1299,6 +1310,8 @@ void createDoglegVCG() {
 					}
 				}
 			}
+
+			
 		}
 	}
 }
