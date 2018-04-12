@@ -1791,7 +1791,7 @@ void printToFile() {
 
 #pragma region OpenGL
 bool sortheighthelper(VCG *dat1, VCG *dat2) {
-	return (dat1->distanceToSink) > (dat2->distanceToSink);
+	return (dat1->distanceToSink) < (dat2->distanceToSink);
 
 }
 
@@ -1864,6 +1864,85 @@ void updatenetvertex(VCG* net, vector<string> netdog, bool flag)
 		netvertex.push_back(y);
 		netvertex.push_back(z);
 		netsatvertex.push_back(net->netid + net->dogid);
+	}
+}
+
+void updateVertnetvertex(VCG* net, vector<string> netdog,bool flag)
+{
+	float x, y, z = 0;
+	float maxX = tops.size()*1.2; // to scale between 0 - 1
+	float maxY = allVCG.size()*1.2;
+
+	for (size_t i = 0; i < net->indexes.size(); i++) {
+
+		if (net->directions[i]) {
+			if (flag)
+			{
+				x = net->indexes[i] / maxX;
+				y = (netexistsonTrack(netdog[0], netdog[1])) / maxY;
+				netvertex.push_back(x);
+				netvertex.push_back(y);
+				netvertex.push_back(z);
+				netsatvertex.push_back(net->netid + net->dogid);
+
+				y = 0.9;
+				netvertex.push_back(x);
+				netvertex.push_back(y);
+				netvertex.push_back(z);
+				netsatvertex.push_back(net->netid + net->dogid);
+			}
+			else {
+				x = net->indexes[i] / maxX;
+				y = (netexistsonTrack(netdog[0], netdog[2])) / maxY;
+				netvertex.push_back(x);
+				netvertex.push_back(y);
+				netvertex.push_back(z);
+				netsatvertex.push_back(net->netid + net->dogid);
+
+				y = 0.9;
+				netvertex.push_back(x);
+				netvertex.push_back(y);
+				netvertex.push_back(z);
+				netsatvertex.push_back(net->netid + net->dogid);
+
+			}
+
+		}
+
+		else {
+			if (flag)
+			{
+
+				x = net->indexes[i] / maxX;
+				y = (netexistsonTrack(netdog[0], netdog[1])) / maxY;
+				netvertex.push_back(x);
+				netvertex.push_back(y);
+				netvertex.push_back(z);
+				netsatvertex.push_back(net->netid + net->dogid);
+
+				y = -0.1;
+				netvertex.push_back(x);
+				netvertex.push_back(y);
+				netvertex.push_back(z);
+				netsatvertex.push_back(net->netid + net->dogid);
+			}
+			else {
+
+				x = net->indexes[i] / maxX;
+				y = (netexistsonTrack(netdog[0], netdog[2])) / maxY;
+				netvertex.push_back(x);
+				netvertex.push_back(y);
+				netvertex.push_back(z);
+				netsatvertex.push_back(net->netid + net->dogid);
+
+				y = -0.1;
+				netvertex.push_back(x);
+				netvertex.push_back(y);
+				netvertex.push_back(z);
+				netsatvertex.push_back(net->netid + net->dogid);
+			}
+
+		}
 	}
 }
 
@@ -1961,6 +2040,7 @@ void makedrawvertex() {
 			if (i == netsatvertex.end())
 			{
 				updatenetvertex(top1,topVec,true);
+				updateVertnetvertex(top1, topVec, true);
 			}
 		}
 
@@ -1970,6 +2050,7 @@ void makedrawvertex() {
 			if (i == netsatvertex.end())
 			{
 				updatenetvertex(top2, topVec, false);
+				updateVertnetvertex(top2, topVec, false);
 			}
 		}
 
@@ -1979,6 +2060,7 @@ void makedrawvertex() {
 			if (i == netsatvertex.end())
 			{
 				updatenetvertex(bot1, botVec, true);
+				updateVertnetvertex(bot1, botVec, true);
 			}
 
 		}
@@ -1988,15 +2070,13 @@ void makedrawvertex() {
 			if (i == netsatvertex.end())
 			{
 				updatenetvertex(bot2, botVec, false);
+				updateVertnetvertex(bot2, botVec, false);
 			}
 
 		}
 	}
 }
 
-//void makevertarr(vector<float> arr) {
-//	
-//}
 
 //settings
 const unsigned int SCR_WIDTH = 800;
