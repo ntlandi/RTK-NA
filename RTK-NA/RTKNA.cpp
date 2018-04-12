@@ -8,7 +8,7 @@ vector<int> bot;
 vector<vector<string>> zone;
 vector<vector<string>> final_zone;
 vector<string> union_zone;
-vector<string> union_zone_diff;
+vector<string> union_zone_diff, *predpath;
 vector<vector<string>> ini_zone;
 vector<vector<string>> ininet, finalnet, inidog, finaldog;
 net * first;
@@ -29,6 +29,7 @@ int netexistsonTrack(string , string );
 
 int main(int argc, char* argv[])
 {
+	predpath = new vector<string>();
 	dogcounter = 0;
 	merging = false;
 	string filepath, dog1;
@@ -101,7 +102,6 @@ bool pathToSource(string netid, string dogid, int index) {
 			if (!pathToSource(netid, dogid, VCGexists(allVCG[index]->predecessors[i], allVCG[index]->dogpred[i]))) {
 				return false;
 			}
-			
 		}
 	}
 	if (origindex == index)
@@ -179,7 +179,14 @@ int Merge() {
 		Ldog.insert(Ldog.end(), zoneHoldDog.begin(), zoneHoldDog.end());
 		if (!R.empty())
 		{
-			n = g(L, Ldog, (m = f(R, Rdog)));
+			m = f(R, Rdog);
+			if (!m.empty())
+			{
+				n = g(L, Ldog, m);
+			}
+			else {
+				continue;
+			}
 
 			if (!n.empty())
 			{
@@ -205,7 +212,7 @@ int Merge() {
 
 vector<string> f(vector<string> Q, vector<string> N) {
 	double C = 100;
-	double highest = -1;
+	double highest = 0;
 	vector<string> high;
 
 	for (size_t i = 0; i < Q.size(); i++) {
@@ -766,8 +773,14 @@ void distFromSink(string netid, string dogid, int counter) {
 	if (counter > allVCG[VCGexists(netid, dogid)]->distanceToSink) {
 		allVCG[VCGexists(netid, dogid)]->distanceToSink = counter;
 	}
+	
 	for (size_t i = 0; i < allVCG[VCGexists(netid, dogid)]->predecessors.size(); i++) {
+		predpath->push_back(netid + dogid);
 		distFromSink(allVCG[VCGexists(netid, dogid)]->predecessors[i], allVCG[VCGexists(netid, dogid)]->dogpred[i], counter + 1);
+		if (allVCG[VCGexists(netid, dogid)]->predecessors.size() > 0)
+		{
+			predpath->pop_back();
+		}
 	}
 }
 
@@ -992,10 +1005,11 @@ trynewdog:
 	updateVCGDog(index, dogindex, hold);
 }
 
+#pragma region dogleg all code
 void doglegAllHelper(int netindex) {
 
-	vector<string> topVec,botVec;
-	
+	vector<string> topVec, botVec;
+
 #pragma region determine if double or single dog
 	int holdind = 0, ind = 0;
 	string line1 = tops[netindex], line2 = bots[netindex];
@@ -1156,7 +1170,7 @@ void doglegAll() {
 
 				next->startind = min(next->indexes[0], next->indexes[1]);
 				next->endind = max(next->indexes[0], next->indexes[1]);
-				
+
 				if (hold->directions[j]) {
 					tops[hold->indexes[j]] += next->dogid;
 				}
@@ -1242,7 +1256,7 @@ void createDoglegVCG() {
 
 		for (size_t j = 0; j < hold->indexes.size(); j++)
 		{
-			
+
 			int holdind = 0, ind = 0;
 			int netindex = hold->indexes[j];
 			vector<string> topVec = getVec(tops[netindex]), botVec = getVec(bots[netindex]);
@@ -1336,10 +1350,12 @@ void createDoglegVCG() {
 				}
 			}
 
-			
+
 		}
 	}
 }
+#pragma endregion
+
 
 #pragma region +1 Helper Methods
 int VCGexistsDog(string id) {
