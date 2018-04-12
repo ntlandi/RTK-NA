@@ -72,4 +72,5 @@ int findDesc(vector<string>::iterator it, string net, string dog, int);
 void convertToNetDog();
 void doglegAll();
 void createDoglegVCG();
+vector<string> getVec(string line);
 #pragma endregion

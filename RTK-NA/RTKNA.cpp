@@ -196,7 +196,7 @@ int Merge() {
 
 vector<string> f(vector<string> Q, vector<string> N) {
 	double C = 100;
-	double highest = 0;
+	double highest = -1;
 	vector<string> high;
 
 	for (size_t i = 0; i < Q.size(); i++) {
@@ -1069,7 +1069,7 @@ void doglegAllHelper(int netindex) {
 	}
 #pragma region Desc and Pred
 
-	if (bot1 != nullptr && top1 != nullptr)
+	if (bot1 != nullptr && top1 != nullptr && bot1->netid != top1->netid && top1->dogid != bot1->dogid)
 	{
 		top1->decendents.push_back(bot1->netid);
 		top1->dogdesc.push_back(bot1->dogid);
@@ -1078,31 +1078,37 @@ void doglegAllHelper(int netindex) {
 	}
 
 	if (top2 != nullptr && bot2 != nullptr) {
-		top1->decendents.push_back(bot2->netid);
-		top1->dogdesc.push_back(bot2->dogid);
+		if (top2->netid != bot1->netid && top2->dogid != bot1->dogid)
+		{
+			bot1->predecessors.push_back(top2->netid);
+			bot1->dogpred.push_back(top2->dogid);
+			top2->decendents.push_back(bot1->netid);
+			top2->dogdesc.push_back(bot1->dogid);
+		}
+		if (bot2->netid != top1->netid && bot2->dogid != top1->dogid)
+		{
+			bot2->predecessors.push_back(top1->netid);
+			bot2->dogpred.push_back(top1->dogid);
+			top1->decendents.push_back(bot2->netid);
+			top1->dogdesc.push_back(bot2->dogid);
+		}
+		if (top2->netid != bot2->netid && top2->dogid != bot2->dogid)
+		{
+			top2->decendents.push_back(bot2->netid);
+			top2->dogdesc.push_back(bot2->dogid);
+			bot2->predecessors.push_back(top2->netid);
+			bot2->dogpred.push_back(top2->dogid);
+		}
+	}
+	else if (top2 != nullptr && top2->netid != bot1->netid && top2->dogid != bot1->dogid) {
 		bot1->predecessors.push_back(top2->netid);
 		bot1->dogpred.push_back(top2->dogid);
-
-		top2->decendents.push_back(bot1->netid);
-		top2->dogdesc.push_back(bot1->dogid);
-		bot2->predecessors.push_back(top1->netid);
-		bot2->dogpred.push_back(top1->dogid);
-		top2->decendents.push_back(bot2->netid);
-		top2->dogdesc.push_back(bot2->dogid);
-		bot2->predecessors.push_back(top2->netid);
-		bot2->dogpred.push_back(top2->dogid);
-	}
-	else if (top2 != nullptr) {
-		bot1->predecessors.push_back(top2->netid);
-		bot1->dogpred.push_back(top2->dogid);
-
 		top2->decendents.push_back(bot1->netid);
 		top2->dogdesc.push_back(bot1->dogid);
 	}
-	else if (bot2 != nullptr) {
+	else if (bot2 != nullptr && bot2->netid != top1->netid && bot2->dogid != top1->dogid) {
 		top1->decendents.push_back(bot2->netid);
 		top1->dogdesc.push_back(bot2->dogid);
-
 		bot2->predecessors.push_back(top1->netid);
 		bot2->dogpred.push_back(top1->dogid);
 	}
