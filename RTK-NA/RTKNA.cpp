@@ -1153,7 +1153,7 @@ void doglegAllHelper(int netindex) {
 
 #pragma region Desc and Pred
 
-	if (bot1 != nullptr && top1 != nullptr && bot1->netid != top1->netid && top1->dogid != bot1->dogid)
+	if (bot1 != nullptr && top1 != nullptr && ((bot1->netid != top1->netid)? true:(top1->dogid != bot1->dogid)))
 	{
 		top1->decendents.push_back(bot1->netid);
 		top1->dogdesc.push_back(bot1->dogid);
@@ -1162,21 +1162,21 @@ void doglegAllHelper(int netindex) {
 	}
 
 	if (top2 != nullptr && bot2 != nullptr) {
-		if (top2->netid != bot1->netid && top2->dogid != bot1->dogid)
+		if ((top2->netid != bot1->netid)?true:(top2->dogid != bot1->dogid))
 		{
 			bot1->predecessors.push_back(top2->netid);
 			bot1->dogpred.push_back(top2->dogid);
 			top2->decendents.push_back(bot1->netid);
 			top2->dogdesc.push_back(bot1->dogid);
 		}
-		if (bot2->netid != top1->netid && bot2->dogid != top1->dogid)
+		if ((bot2->netid != top1->netid)? true:(bot2->dogid != top1->dogid))
 		{
 			bot2->predecessors.push_back(top1->netid);
 			bot2->dogpred.push_back(top1->dogid);
 			top1->decendents.push_back(bot2->netid);
 			top1->dogdesc.push_back(bot2->dogid);
 		}
-		if (top2->netid != bot2->netid && top2->dogid != bot2->dogid)
+		if ((top2->netid != bot2->netid)? true:(top2->dogid != bot2->dogid))
 		{
 			top2->decendents.push_back(bot2->netid);
 			top2->dogdesc.push_back(bot2->dogid);
@@ -1184,13 +1184,13 @@ void doglegAllHelper(int netindex) {
 			bot2->dogpred.push_back(top2->dogid);
 		}
 	}
-	else if (top2 != nullptr && top2->netid != bot1->netid && top2->dogid != bot1->dogid) {
+	else if (top2 != nullptr && ((top2->netid != bot1->netid)? true:(top2->dogid != bot1->dogid))) {
 		bot1->predecessors.push_back(top2->netid);
 		bot1->dogpred.push_back(top2->dogid);
 		top2->decendents.push_back(bot1->netid);
 		top2->dogdesc.push_back(bot1->dogid);
 	}
-	else if (bot2 != nullptr && bot2->netid != top1->netid && bot2->dogid != top1->dogid) {
+	else if (bot2 != nullptr && ((bot2->netid != top1->netid)? true:(bot2->dogid != top1->dogid))) {
 		top1->decendents.push_back(bot2->netid);
 		top1->dogdesc.push_back(bot2->dogid);
 		bot2->predecessors.push_back(top1->netid);
@@ -1869,7 +1869,6 @@ void printToFile() {
 #pragma region OpenGL
 bool sortheighthelper(VCG *dat1, VCG *dat2) {
 	return (dat1->distanceToSink) < (dat2->distanceToSink);
-
 }
 
 int netexistsonTrack(string netid, string dogid) {
@@ -1897,7 +1896,6 @@ int netexistsonTrack(string netid, string dogid) {
 		}
 		holdnet.clear();
 		holddog.clear();
-
 	}
 	return -1;
 }
@@ -2268,12 +2266,6 @@ int draw(void)
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
 
-	//float vertices[] = {
-	//		-1.0f, -0.521f, 0.0f, // left  
-	//		0.22f, -0.521f, 0.0f, // right 
-	//		0.5f, -0.5f, 0.0f,  // top
-	//		0.5f, 0.5f, 0.0f
-	//	};
 	int i = netvertex.size() / 3;
 	unsigned int VBO, VAO;
 	glGenVertexArrays(1, &VAO);
@@ -2287,17 +2279,13 @@ int draw(void)
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+	// the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
 	glBindVertexArray(0);
 
 
-	// uncomment this call to draw in wireframe polygons.
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
+	
 	// render loop
 	// -----------
 	while (!glfwWindowShouldClose(window))
@@ -2311,12 +2299,11 @@ int draw(void)
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// draw our first triangle
+		// 
 		glUseProgram(shaderProgram);
-		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-
+		glBindVertexArray(VAO);
 		glDrawArrays(GL_LINES, 0, i);
-		// glBindVertexArray(0); // no need to unbind it every time 
+		
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		// -------------------------------------------------------------------------------
@@ -2348,8 +2335,6 @@ void processInput(GLFWwindow *window)
 // ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-	// make sure the viewport matches the new window dimensions; note that width and 
-	// height will be significantly larger than specified on retina displays.
 	glViewport(0, 0, width, height);
 }
 #pragma endregion
