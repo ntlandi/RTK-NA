@@ -10,7 +10,7 @@ net * first;
 vector<net*> netlist;
 vector<VCG*> allVCG, source, sink, mergedVCG;
 
-bool dog, merging, doglegAlldone, outputFlag;
+bool dog, merging, doglegAlldone, outputFlag, suppressFlag;
 int dogcounter;
 vector<float> netvertex;
 double highesthold, C, lowesthold;
@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 {
 	predpath = new vector<string>();
 	dogcounter = 0;
-	merging = false, outputFlag = false, dog = false;
+	merging = false, outputFlag = false, dog = false, suppressFlag = false;
 	string filepath, dog1;
 
 	//getline(cin, filepath);
@@ -47,6 +47,9 @@ int main(int argc, char *argv[])
 			else if (arg == "-i") {
 				filepath = argv[i + 1];
 			}
+			else if (arg == "--suppress") {
+				suppressFlag = true;
+			}
 		}
 	}
 	else {
@@ -54,7 +57,11 @@ int main(int argc, char *argv[])
 		cout << "incorrect amount of variables";
 		return 1;
 	}
-	cout << "\n--------------------------BEGIN PROGRAM--------------------------\n";
+
+	if (!suppressFlag)
+	{
+		cout << "\n--------------------------BEGIN PROGRAM--------------------------\n";
+	}
 	clock_t start = clock();
 	parse(filepath);
 	arraytonet();
@@ -68,15 +75,21 @@ int main(int argc, char *argv[])
 	}
 
 	//Zoning Code
-	cout << "\n--------------------------BEGIN ZONING--------------------------\n";
-	Zoning();
-	final_zone.resize(static_cast<int>(zone.size()));
-	Zone_Sort();
-	Zone_union();
-	Zone_diff_union();
-	convertToNetDog();
-
-	cout << "\n--------------------------BEGIN MERGING--------------------------\n";
+	if (!suppressFlag)
+	{
+		cout << "\n--------------------------BEGIN ZONING--------------------------\n";
+	}
+		Zoning();
+		final_zone.resize(static_cast<int>(zone.size()));
+		Zone_Sort();
+		Zone_union();
+		Zone_diff_union();
+		convertToNetDog();
+	
+	if (!suppressFlag)
+	{
+		cout << "\n--------------------------BEGIN MERGING--------------------------\n";
+	}
 	while (Merge() > 0);
 
 	cout << "\n\nMerging finished\nMerge stats:\nMerged nets: " + to_string(mergedVCG.size()) + "\nTotal height: " + to_string(allVCG.size()) +"\n";
@@ -206,7 +219,10 @@ int Merge() {
 
 			if (!n.empty())
 			{
-				cout << "Merging nets " + n[0]+n[1] + " and " + m[0] +m[1] + "...\n";
+				if (!suppressFlag)
+				{
+					cout << "Merging nets " + n[0] + n[1] + " and " + m[0] + m[1] + "...\n";
+				}
 				updateVCG(n, m);
 				updateZones(n, m);
 
@@ -537,11 +553,15 @@ void Zoning() {
 	}
 	zone.erase(zone.begin() + p + 1, zone.end());
 
-	for (int k1 = 0; k1 < static_cast<int>(zone.size()); k1++) {
-		cout << endl;
-		cout << "Zone no" << (k1 + 1) << endl;
-		for (int k2 = 0; k2 < static_cast<int>(zone[k1].size()); k2++) {
-			cout << " " << zone[k1][k2];
+	if (!suppressFlag)
+	{
+		for (int k1 = 0; k1 < static_cast<int>(zone.size()); k1++) {
+
+			cout << endl;
+			cout << "Zone no" << (k1 + 1) << endl;
+			for (int k2 = 0; k2 < static_cast<int>(zone[k1].size()); k2++) {
+				cout << " " << zone[k1][k2];
+			}
 		}
 	}
 
@@ -641,7 +661,10 @@ void convertToNetDog() {
 #pragma region VCG
 				//Constructs the original VCG graph
 void makeVCG() {
-	cout << "\n--------------------------BEGIN VCG CONSTRUCTION--------------------------";
+	if (!suppressFlag)
+	{
+		cout << "\n--------------------------BEGIN VCG CONSTRUCTION--------------------------";
+	}
 	trackToString();
 	//top
 	for (size_t i = 0; i < tops.size(); i++) {
@@ -699,7 +722,10 @@ void makeVCG() {
 	}
 
 	sourceAndSink();
-	cout << "\nInitial VCG Construction done...";
+	if (!suppressFlag)
+	{
+		cout << "\nInitial VCG Construction done...";
+	}
 	findDistance();
 	//transientRemoval();
 }
@@ -741,7 +767,10 @@ void sourceAndSink() {
 }
 
 bool findDistance() {
-	cout << "\nBegin pathfinding algoritm...\n";
+	if (!suppressFlag)
+	{
+		cout << "\nBegin pathfinding algoritm...\n";
+	}
 	for (int i = 0; i < (int)source.size(); i++) {
 		vector<string> p = vector<string>();
 		vector<string> f = vector<string>();
@@ -762,7 +791,10 @@ bool findDistance() {
 	for (size_t i = 0; i < sink.size(); i++) {
 		distFromSink(sink[i]->netid, sink[i]->dogid, 0);
 	}
-	cout << "\nPathfinding finished...\n";
+	if (!suppressFlag)
+	{
+		cout << "\nPathfinding finished...\n";
+	}
 }
 
 int findPath(vector<string> path, vector<string> dogpath, string desc, string dogdesc) {
@@ -788,7 +820,10 @@ bool distFromSource(string netid, string dogid, int counter, vector<string> path
 				cout << "ERROR: Cycle created by merging";
 				exit(-2);
 			}
-			cout << "\nCycle detected: begin +1 doglegging...\n";
+			if (!suppressFlag)
+			{
+				cout << "\nCycle detected: begin +1 doglegging...\n";
+			}
 			path.erase(path.begin(), path.begin() + index);
 			dogpath.erase(dogpath.begin(), dogpath.begin() + index);
 			dogleg(path, dogpath);
@@ -1049,10 +1084,15 @@ trynewdog:
 		count++;
 		goto trynewdog;
 	}
-
-	cout << "+1 doglegging at index: " + to_string(dogindex) + " netid: " + hold->netid + hold->dogid + "...\n";
+	if (!suppressFlag)
+	{
+		cout << "+1 doglegging at index: " + to_string(dogindex) + " netid: " + hold->netid + hold->dogid + "...\n";
+	}
 	updateVCGDog(index, dogindex, hold);
-	cout << "Dogleg successful. Restarting pathfinding algorithm\n";
+	if (!suppressFlag)
+	{
+		cout << "Dogleg successful. Restarting pathfinding algorithm\n";
+	}
 }
 
 #pragma region dogleg all code
@@ -1789,77 +1829,6 @@ int findIn(vector<string> v1, vector<string> v2, string a, string b) {
 	return -1;
 }
 #pragma endregion
-
-
-///////////////////////////////////////////////////////////////////////
-//                             Printing								 //
-///////////////////////////////////////////////////////////////////////
-
-#pragma region Printing
-vector<string> VCGParse(string s) {
-	vector<string> nets;
-	int index = 0, previndex = 0;
-	while (index < s.length()) {
-		index = s.find(",", (size_t)previndex);
-		nets.push_back((s.substr(previndex, index - previndex)));
-		previndex = index + 1;
-	}
-
-
-	return nets;
-}
-
-string vectorToString(vector<int> s) {
-	string p;
-	for (size_t i = 0; i < s.size(); i++) {
-		p += to_string(s[i]) + " ";
-	}
-
-	return p;
-}
-
-string vectorToString(vector<bool> s) {
-	string p;
-	for (size_t i = 0; i < s.size(); i++) {
-		p += s[i] ? "u" : "d";
-	}
-	return p;
-}
-
-bool sortVCG(const VCG *a, const VCG *b) {
-	return a->distanceToSource < b->distanceToSource;
-}
-
-void printToFile() {
-	vector<string> nets;
-	string file = "RTK-NA.out";
-	ofstream f;
-	f.open(file);
-	int netind;
-
-	sort(allVCG.begin(), allVCG.end(), sortVCG);
-
-	for (size_t i = 0; i < allVCG.size(); i++) {
-		string s = allVCG[i]->netid;
-
-		nets = VCGParse(s);
-
-		for (size_t j = 0; j < nets.size(); j++) {
-			netind = getNetlistInd(stoi(nets[j]));
-
-			f << (to_string(netlist[netind]->netnum) + " ");
-			f << ("s " + to_string(netlist[netind]->startind) + " ");
-			f << ("e " + to_string(netlist[netind]->endind) + " ");
-			f << ("i " + vectorToString(netlist[netind]->indexes));
-			f << ("d " + vectorToString(netlist[netind]->directions) + " ");
-			f << "\n";
-		}
-		f << "|\n";
-	}
-	f.close();
-}
-#pragma endregion
-
 
 ///////////////////////////////////////////////////////////////////////
 //                             OpenGL								 //
