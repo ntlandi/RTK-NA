@@ -1950,75 +1950,99 @@ void updateVertnetvertex(VCG* net, vector<string> netdog, bool flag)
 	float maxX = tops.size()*1.2; // to scale between 0 - 1
 	float maxY = allVCG.size()*1.2;
 
-	for (size_t i = 0; i < net->directions.size(); i++) {
+	for (size_t i = 0; i < net->indexes.size(); i++) {
 
-		if (net->directions[i]) {
-			if (flag)
-			{
-				x = net->indexes[i] / maxX;
-				y = (netexistsonTrack(netdog[0], netdog[1])) / maxY;
-				netvertex.push_back(x);
-				netvertex.push_back(y);
-				netvertex.push_back(z);
-				netsatvertex.push_back(net->netid + net->dogid);
+		if (i<net->directions.size())
+		{
+			if (net->directions[i]) {
+				if (flag)
+				{
+					x = net->indexes[i] / maxX;
+					y = (netexistsonTrack(netdog[0], netdog[1])) / maxY;
+					netvertex.push_back(x);
+					netvertex.push_back(y);
+					netvertex.push_back(z);
+					netsatvertex.push_back(net->netid + net->dogid);
 
-				y = 0.9;
-				netvertex.push_back(x);
-				netvertex.push_back(y);
-				netvertex.push_back(z);
-				netsatvertex.push_back(net->netid + net->dogid);
+					y = 0.9;
+					netvertex.push_back(x);
+					netvertex.push_back(y);
+					netvertex.push_back(z);
+					netsatvertex.push_back(net->netid + net->dogid);
+				}
+				else {
+					x = net->indexes[i] / maxX;
+					y = (netexistsonTrack(netdog[0], netdog[2])) / maxY;
+					netvertex.push_back(x);
+					netvertex.push_back(y);
+					netvertex.push_back(z);
+					netsatvertex.push_back(net->netid + net->dogid);
+
+					y = 0.9;
+					netvertex.push_back(x);
+					netvertex.push_back(y);
+					netvertex.push_back(z);
+					netsatvertex.push_back(net->netid + net->dogid);
+
+				}
+
 			}
+
 			else {
-				x = net->indexes[i] / maxX;
-				y = (netexistsonTrack(netdog[0], netdog[2])) / maxY;
-				netvertex.push_back(x);
-				netvertex.push_back(y);
-				netvertex.push_back(z);
-				netsatvertex.push_back(net->netid + net->dogid);
+				if (flag)
+				{
 
-				y = 0.9;
-				netvertex.push_back(x);
-				netvertex.push_back(y);
-				netvertex.push_back(z);
-				netsatvertex.push_back(net->netid + net->dogid);
+					x = net->indexes[i] / maxX;
+					y = (netexistsonTrack(netdog[0], netdog[1])) / maxY;
+					netvertex.push_back(x);
+					netvertex.push_back(y);
+					netvertex.push_back(z);
+					netsatvertex.push_back(net->netid + net->dogid);
+
+					y = -0.1;
+					netvertex.push_back(x);
+					netvertex.push_back(y);
+					netvertex.push_back(z);
+					netsatvertex.push_back(net->netid + net->dogid);
+				}
+				else {
+
+					x = net->indexes[i] / maxX;
+					y = (netexistsonTrack(netdog[0], netdog[2])) / maxY;
+					netvertex.push_back(x);
+					netvertex.push_back(y);
+					netvertex.push_back(z);
+					netsatvertex.push_back(net->netid + net->dogid);
+
+					y = -0.1;
+					netvertex.push_back(x);
+					netvertex.push_back(y);
+					netvertex.push_back(z);
+					netsatvertex.push_back(net->netid + net->dogid);
+				}
 
 			}
-
 		}
-
 		else {
-			if (flag)
-			{
+			//find its +1 dogleg partner
+			stringstream ss;
+			ss << (char)(net->dogid[0] + 1);
+			string s;
+			ss >> s;
+			
+			x = net->endind / maxX;
+			y = (netexistsonTrack(net->netid, net->dogid)) / maxY;
+			netvertex.push_back(x);
+			netvertex.push_back(y);
+			netvertex.push_back(z);
 
-				x = net->indexes[i] / maxX;
-				y = (netexistsonTrack(netdog[0], netdog[1])) / maxY;
-				netvertex.push_back(x);
-				netvertex.push_back(y);
-				netvertex.push_back(z);
-				netsatvertex.push_back(net->netid + net->dogid);
-
-				y = -0.1;
-				netvertex.push_back(x);
-				netvertex.push_back(y);
-				netvertex.push_back(z);
-				netsatvertex.push_back(net->netid + net->dogid);
-			}
-			else {
-
-				x = net->indexes[i] / maxX;
-				y = (netexistsonTrack(netdog[0], netdog[2])) / maxY;
-				netvertex.push_back(x);
-				netvertex.push_back(y);
-				netvertex.push_back(z);
-				netsatvertex.push_back(net->netid + net->dogid);
-
-				y = -0.1;
-				netvertex.push_back(x);
-				netvertex.push_back(y);
-				netvertex.push_back(z);
-				netsatvertex.push_back(net->netid + net->dogid);
-			}
-
+			y = (netexistsonTrack(net->netid, s)) / maxY;
+			netvertex.push_back(x);
+			netvertex.push_back(y);
+			netvertex.push_back(z);
+			netsatvertex.push_back(net->netid + net->dogid + s);
+			netsatvertex.push_back(net->netid + net->dogid + s);
+			
 		}
 	}
 }
