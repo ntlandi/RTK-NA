@@ -5,7 +5,7 @@
 #include "RTKheader.hpp"
 vector<int> top, bot, zoneEnd;
 vector<vector<string>> zone, final_zone, ini_zone, ininet, inidog, finalnet, finaldog;
-vector<string> union_zone_diff, *predpath, union_zone, tops,bots, L, Ldog, ignore, netsatvertex;
+vector<string> union_zone_diff, *predpath, union_zone, tops, bots, L, Ldog, ignore, netsatvertex;
 net * first;
 vector<net*> netlist;
 vector<VCG*> allVCG, source, sink, mergedVCG;
@@ -13,28 +13,48 @@ vector<VCG*> allVCG, source, sink, mergedVCG;
 bool dog, merging, doglegAlldone, outputFlag;
 int dogcounter;
 vector<float> netvertex;
+double highesthold, C, lowesthold;
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
 	predpath = new vector<string>();
 	dogcounter = 0;
-	merging = false, outputFlag = false, dog = true;
+	merging = false, outputFlag = false, dog = false;
 	string filepath, dog1;
 
 	//getline(cin, filepath);
 
-	for (int i = 1; i < argc; i++) {
-		if (argv[i] == "o") {
-			outputFlag = true;
-		}
-		if (argv[i] == "d") {
-			dog = true;
-		}
-		if (i == argc - 1) {
-			filepath = argv[i];
+	if (argc > 7)
+	{
+		for (int i = 1; i < argc; i++) {
+			string arg = argv[i];
+			if (arg == "-d") {
+				dog = true;
+				cout << "doglegging enabled\n";
+			}
+			else if (arg == "-c" || arg == "-C") {
+				C = atoi(argv[i + 1]);
+				cout << "C: " + to_string(C) + " ";
+			}
+			else if (arg == "-f" || arg == "-F") {
+				highesthold = atoi(argv[i + 1]);
+				cout << "f: " + to_string(highesthold) + " ";
+			}
+			else if (arg == "-g" || arg == "-G") {
+				lowesthold = atoi(argv[i + 1]);
+				cout << "g: " + to_string(lowesthold) + " ";
+			}
+			else if (arg == "-i") {
+				filepath = argv[i + 1];
+			}
 		}
 	}
-
+	else {
+		//printHelp();
+		cout << "incorrect amount of variables";
+		return 1;
+	}
+	cout << "\n--------------------------BEGIN PROGRAM--------------------------\n";
 	clock_t start = clock();
 	parse(filepath);
 	arraytonet();
@@ -48,25 +68,26 @@ int main(int argc, char* argv[])
 	}
 
 	//Zoning Code
-
+	cout << "\n--------------------------BEGIN ZONING--------------------------\n";
 	Zoning();
 	final_zone.resize(static_cast<int>(zone.size()));
 	Zone_Sort();
 	Zone_union();
 	Zone_diff_union();
 	convertToNetDog();
- 	
+
+	cout << "\n--------------------------BEGIN MERGING--------------------------\n";
 	while (Merge() > 0);
 
+	cout << "\n\nMerging finished\nMerge stats:\nMerged nets: " + to_string(mergedVCG.size()) + "\nTotal height: " + to_string(allVCG.size()) +"\n";
 
-	printf("\n\n%d", clock() - start);
+
+	printf("\n\nProgram runtime(ms): %d\n\n", clock() - start);
+	cout << "drawing results...\n\n";
 	makedrawvertex();
 	draw();
-	if (outputFlag)
-	{
-		printToFile();
-	}
- 	return 0;
+
+	return 0;
 }
 
 int origindex;
@@ -185,6 +206,7 @@ int Merge() {
 
 			if (!n.empty())
 			{
+				cout << "Merging nets " + n[0]+n[1] + " and " + m[0] +m[1] + "...\n";
 				updateVCG(n, m);
 				updateZones(n, m);
 
@@ -206,8 +228,8 @@ int Merge() {
 }
 
 vector<string> f(vector<string> Q, vector<string> N) {
-	double C = 100;
-	double highest = 0;
+
+	double highest = highesthold;
 	vector<string> high;
 
 	for (size_t i = 0; i < Q.size(); i++) {
@@ -229,8 +251,8 @@ vector<string> f(vector<string> Q, vector<string> N) {
 }
 
 vector<string> g(vector<string> P, vector<string> E, vector<string> m) {
-	double C = 100;
-	double lowest =100000;
+
+	double lowest = lowesthold;
 	vector<string> low;
 	for (size_t i = 0; i < P.size(); i++) {
 		double hold = C * (max(allVCG[VCGexists(P[i], E[i])]->distanceToSource, allVCG[VCGexists((m[0]), m[1])]->distanceToSource) + max(allVCG[VCGexists((P[i]), E[i])]->distanceToSink, allVCG[VCGexists((m[0]), m[1])]->distanceToSink)
@@ -279,9 +301,9 @@ vector<vector<string>> unique(vector<string> a1, vector<string> a2, vector<strin
 	return ret;
 }
 
-void updateVCG(vector<string> a,  vector<string> b) {
+void updateVCG(vector<string> a, vector<string> b) {
 	vector<string> newdesc, newpred, newdogdesc, newdogpred;
-	
+
 
 #pragma region desc
 	vector<vector<string>> s = unique(allVCG[VCGexists(a[0], a[1])]->decendents, allVCG[VCGexists(a[0], a[1])]->dogdesc, allVCG[VCGexists(b[0], b[1])]->decendents, allVCG[VCGexists(b[0], b[1])]->dogdesc);
@@ -411,7 +433,7 @@ void updateVCG(vector<string> a,  vector<string> b) {
 void updateZones(vector<string> a, vector<string> b) {
 	int ind, ind1, ind2, i1, i2;
 	for (size_t i = 0; i < ininet.size(); i++) {
-		if ((ind = findininet(ininet[i].begin(),  a[0],a[1], i)) != -1)
+		if ((ind = findininet(ininet[i].begin(), a[0], a[1], i)) != -1)
 		{
 			ind1 = ind;
 			ininet[i].erase(ininet[i].begin() + ind1);
@@ -474,7 +496,7 @@ void updateZones(vector<string> a, vector<string> b) {
 #pragma region Zoning
 void Zoning() {
 	//Zoning Code
-		
+
 	vector< vector<string> > col;
 	for (size_t i1 = 0; i1 < tops.size(); i1++) {
 		vector<string> row; // Create an empty row
@@ -483,7 +505,7 @@ void Zoning() {
 				row.push_back(allVCG[j1]->netid + allVCG[j1]->dogid); // Add an element (column) to the row
 			}
 		}
-		sort(row.begin(),row.end()); // Sort strings 
+		sort(row.begin(), row.end()); // Sort strings 
 		col.push_back(row); // Add the row to the main vector
 	}
 
@@ -491,10 +513,10 @@ void Zoning() {
 	zone.push_back(col[0]);
 
 	for (int k1 = 0; k1 < static_cast<int>(tops.size()) - 1; k1++) {
-		
+
 		if ((includes(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end())) || (includes(col[k1 + 1].begin(), col[k1 + 1].end(), col[k1].begin(), col[k1].end()))) {
 			//"Subset";
-			std::vector<string> temp_colunion(col[k1].size() + col[k1+1].size());
+			std::vector<string> temp_colunion(col[k1].size() + col[k1 + 1].size());
 			std::vector<string>::iterator it;
 			it = set_union(col[k1].begin(), col[k1].end(), col[k1 + 1].begin(), col[k1 + 1].end(), temp_colunion.begin());
 			temp_colunion.resize(it - temp_colunion.begin());
@@ -503,18 +525,18 @@ void Zoning() {
 				zone[p] = temp_colunion;
 
 			}
-			
+
 		}
 		else {
 			//"not a subset";
-			
+
 			p += 1;
 			zone.push_back(col[k1 + 1]);
 		}
 
 	}
-	zone.erase(zone.begin() + p+1, zone.end());
-	
+	zone.erase(zone.begin() + p + 1, zone.end());
+
 	for (int k1 = 0; k1 < static_cast<int>(zone.size()); k1++) {
 		cout << endl;
 		cout << "Zone no" << (k1 + 1) << endl;
@@ -545,7 +567,7 @@ void Zone_Sort() {
 	vector<string> last_zone(10);
 
 	for (int l1 = 0; l1 < static_cast<int>(zone.size()) - 1; l1++) {
-		vector<string> temp_zone_diff(zone[l1].size() + zone[l1+1].size());
+		vector<string> temp_zone_diff(zone[l1].size() + zone[l1 + 1].size());
 
 		it1 = set_difference(zone[l1].begin(), zone[l1].end(), zone[l1 + 1].begin(), zone[l1 + 1].end(), temp_zone_diff.begin());
 		temp_zone_diff.resize(it1 - temp_zone_diff.begin());
@@ -619,6 +641,7 @@ void convertToNetDog() {
 #pragma region VCG
 				//Constructs the original VCG graph
 void makeVCG() {
+	cout << "\n--------------------------BEGIN VCG CONSTRUCTION--------------------------";
 	trackToString();
 	//top
 	for (size_t i = 0; i < tops.size(); i++) {
@@ -676,6 +699,7 @@ void makeVCG() {
 	}
 
 	sourceAndSink();
+	cout << "\nInitial VCG Construction done...";
 	findDistance();
 	//transientRemoval();
 }
@@ -717,6 +741,7 @@ void sourceAndSink() {
 }
 
 bool findDistance() {
+	cout << "\nBegin pathfinding algoritm...\n";
 	for (int i = 0; i < (int)source.size(); i++) {
 		vector<string> p = vector<string>();
 		vector<string> f = vector<string>();
@@ -734,9 +759,10 @@ bool findDistance() {
 		}
 	}
 
-for (size_t i = 0; i < sink.size(); i++) {
+	for (size_t i = 0; i < sink.size(); i++) {
 		distFromSink(sink[i]->netid, sink[i]->dogid, 0);
 	}
+	cout << "\nPathfinding finished...\n";
 }
 
 int findPath(vector<string> path, vector<string> dogpath, string desc, string dogdesc) {
@@ -753,7 +779,7 @@ bool distFromSource(string netid, string dogid, int counter, vector<string> path
 	if (counter > allVCG[VCGexists(netid, dogid)]->distanceToSource) {
 		allVCG[VCGexists(netid, dogid)]->distanceToSource = counter;
 	}
-	
+
 	int index;
 	for (size_t i = 0; i < allVCG[(index = VCGexists(netid, dogid))]->decendents.size(); i++) {
 		int index;
@@ -762,8 +788,9 @@ bool distFromSource(string netid, string dogid, int counter, vector<string> path
 				cout << "ERROR: Cycle created by merging";
 				exit(-2);
 			}
+			cout << "\nCycle detected: begin +1 doglegging...\n";
 			path.erase(path.begin(), path.begin() + index);
-			dogpath.erase(dogpath.begin(), dogpath.begin()+index);
+			dogpath.erase(dogpath.begin(), dogpath.begin() + index);
 			dogleg(path, dogpath);
 			flag = false;
 			break;
@@ -792,7 +819,7 @@ void distFromSink(string netid, string dogid, int counter) {
 	if (counter > allVCG[VCGexists(netid, dogid)]->distanceToSink) {
 		allVCG[VCGexists(netid, dogid)]->distanceToSink = counter;
 	}
-	
+
 	for (size_t i = 0; i < allVCG[VCGexists(netid, dogid)]->predecessors.size(); i++) {
 		predpath->push_back(netid + dogid);
 		distFromSink(allVCG[VCGexists(netid, dogid)]->predecessors[i], allVCG[VCGexists(netid, dogid)]->dogpred[i], counter + 1);
@@ -818,7 +845,7 @@ void trackToString() {
 	for (size_t i = 0; i < bot.size(); i++) {
 		bots.push_back(to_string(bot[i]));
 	}
-	
+
 }
 #pragma endregion
 
@@ -834,7 +861,7 @@ void parse(string fileloc) {
 
 	string line;
 	getline(file, line);
-	
+
 	size_t index = 0;
 	size_t previndex = 0;
 
@@ -844,7 +871,7 @@ void parse(string fileloc) {
 		{
 			top.push_back(stoi(line.substr(previndex, index - previndex)));
 		}
-		
+
 		previndex = index + 1;
 	}
 
@@ -857,7 +884,7 @@ void parse(string fileloc) {
 		{
 			bot.push_back(stoi(line.substr(previndex, index - previndex)));
 		}
-		
+
 		previndex = index + 1;
 	}
 }
@@ -888,7 +915,7 @@ void arraytonet() {
 			netlist.push_back(next);
 		}
 
-		label:
+	label:
 		nextnet = bot.at(i);
 		net = findExistingNet(nextnet);
 
@@ -916,6 +943,7 @@ void arraytonet() {
 	}
 
 	sort(netlist.begin(), netlist.end(), sortNet);
+	cout << "Parsing done.\nNetlist stats:\nNetlist size: " + to_string(netlist.size()) + "\nTrack length: " + to_string(top.size()) + "\n";
 }
 
 //accesory function to sort the netlist by netnum
@@ -1017,11 +1045,14 @@ trynewdog:
 		}
 	}
 	// Dont dogleg if end index of net to be doglegged is the dogindex
-	if (dogindex== allVCG[VCGexists(path.at(count), dogpath.at(count))]->endind) {
+	if (dogindex == allVCG[VCGexists(path.at(count), dogpath.at(count))]->endind) {
 		count++;
 		goto trynewdog;
 	}
+
+	cout << "+1 doglegging at index: " + to_string(dogindex) + " netid: " + hold->netid + hold->dogid + "...\n";
 	updateVCGDog(index, dogindex, hold);
+	cout << "Dogleg successful. Restarting pathfinding algorithm\n";
 }
 
 #pragma region dogleg all code
@@ -1282,7 +1313,7 @@ void createDoglegVCG() {
 			vector<string> topVec = getVec(tops[netindex]), botVec = getVec(bots[netindex]);
 
 			if (j >= hold->directions.size()) {
-				
+
 
 				if (botVec.size() > 1)
 				{
@@ -1365,7 +1396,7 @@ void createDoglegVCG() {
 						hold->dogdesc.push_back(botVec[2]);
 					}
 
-					
+
 
 				}
 			}
@@ -1518,7 +1549,7 @@ void lexiDog(string netid, string dogid) {
 				tops[i] = netid + s;
 			}
 		}
-		if (VCGexistsDog(bots[i]) != -1){
+		if (VCGexistsDog(bots[i]) != -1) {
 			if (allVCG[VCGexistsDog(bots[i])]->netid == netid && allVCG[VCGexistsDog(bots[i])]->dogid > dogid) {
 				vector<string> id = separateTrack(i, false);
 				stringstream ss;
@@ -1543,7 +1574,7 @@ void lexiDog(string netid, string dogid) {
 					string s;
 					ss >> s;
 					allVCG[i]->dogpred[predind] = s;
-					
+
 				}
 				predind++;
 			}
@@ -1556,7 +1587,7 @@ void lexiDog(string netid, string dogid) {
 					string s;
 					ss >> s;
 					allVCG[i]->dogdesc[descind] = s;
-					
+
 				}
 				descind++;
 			}
@@ -1611,16 +1642,16 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 
 	vector<string> id;
 	for (size_t i = 0; i < dogind; i++) {
-		
+
 		if (!tops[i].compare(net)) {
 			id = separateTrack(i, false);
-			
+
 			if (id[0] != "0" && id[0].compare(rem->netid))
 			{
 				a->decendents.push_back(id[0]);//separate bots
 				a->dogdesc.push_back(id[1]);
 			}
-			
+
 			a->indexes.push_back(i);
 			a->directions.push_back(true);
 			if (bots[i] != tops[i])
@@ -1629,9 +1660,9 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 				allVCG[VCGexistsDog(bots[i])]->dogpred.push_back(a->dogid);
 			}
 
-			
+
 			tops[i] = a->netid + s;
-			
+
 			// update tops
 		}
 		if (!bots[i].compare(net)) {
@@ -1643,10 +1674,10 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 			}
 			a->indexes.push_back(i);
 			a->directions.push_back(false);
-			
+
 			allVCG[VCGexistsDog(tops[i])]->decendents.push_back(a->netid);
 			allVCG[VCGexistsDog(tops[i])]->dogdesc.push_back(a->dogid);
-			
+
 			bots[i] = a->netid + s; //update bots
 		}
 		if (skip) {
@@ -1668,7 +1699,7 @@ void updateVCGDog(int ind, int dogind, VCG* rem) {
 	for (size_t i = dogind; i < tops.size(); i++) {
 		if (!tops[i].compare(net)) {
 			id = separateTrack(i, false);
-			
+
 			if (id[0] != "0" && id[0].compare(rem->netid))
 			{
 				b->decendents.push_back(id[0]);
@@ -1843,7 +1874,7 @@ bool sortheighthelper(VCG *dat1, VCG *dat2) {
 
 int netexistsonTrack(string netid, string dogid) {
 	vector<string> holdnet, holddog;
-	for (size_t i = 0; i < allVCG.size();i++) {
+	for (size_t i = 0; i < allVCG.size(); i++) {
 		stringstream ss(allVCG[i]->netid);
 		while (ss.good())
 		{
@@ -1860,7 +1891,7 @@ int netexistsonTrack(string netid, string dogid) {
 		}
 		for (size_t j = 0; j < holdnet.size(); j++)
 		{
-			if (holdnet[j] == netid && holddog[j] == ((!dogid.compare(""))?" ":dogid)) {
+			if (holdnet[j] == netid && holddog[j] == ((!dogid.compare("")) ? " " : dogid)) {
 				return i;
 			}
 		}
@@ -1879,7 +1910,7 @@ void updatenetvertex(VCG* net, vector<string> netdog, bool flag)
 
 	if (flag)
 	{
-		
+
 		x = net->startind / maxX;
 		y = (netexistsonTrack(netdog[0], netdog[1])) / maxY;
 		netvertex.push_back(x);
@@ -1896,7 +1927,7 @@ void updatenetvertex(VCG* net, vector<string> netdog, bool flag)
 
 	}
 	else {
-		
+
 		x = net->startind / maxX;
 		y = (netexistsonTrack(netdog[0], netdog[2])) / maxY;
 		netvertex.push_back(x);
@@ -1913,7 +1944,7 @@ void updatenetvertex(VCG* net, vector<string> netdog, bool flag)
 	}
 }
 
-void updateVertnetvertex(VCG* net, vector<string> netdog,bool flag)
+void updateVertnetvertex(VCG* net, vector<string> netdog, bool flag)
 {
 	float x, y, z = 0;
 	float maxX = tops.size()*1.2; // to scale between 0 - 1
@@ -2085,7 +2116,7 @@ void makedrawvertex() {
 			//eliminates duplicate vertices
 			if (i == netsatvertex.end())
 			{
-				updatenetvertex(top1,topVec,true);
+				updatenetvertex(top1, topVec, true);
 				updateVertnetvertex(top1, topVec, true);
 			}
 		}
@@ -2212,14 +2243,14 @@ int draw(void)
 
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
-	
+
 	//float vertices[] = {
 	//		-1.0f, -0.521f, 0.0f, // left  
 	//		0.22f, -0.521f, 0.0f, // right 
 	//		0.5f, -0.5f, 0.0f,  // top
 	//		0.5f, 0.5f, 0.0f
 	//	};
-	int i = netvertex.size()/3;
+	int i = netvertex.size() / 3;
 	unsigned int VBO, VAO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -2227,7 +2258,7 @@ int draw(void)
 	glBindVertexArray(VAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, netvertex.size()*sizeof(float), &netvertex.front(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, netvertex.size() * sizeof(float), &netvertex.front(), GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
