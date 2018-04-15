@@ -9,6 +9,7 @@ vector<string> union_zone_diff, *predpath, union_zone, tops, bots, L, Ldog, igno
 net * first;
 vector<net*> netlist;
 vector<VCG*> allVCG, source, sink, mergedVCG;
+int dogsmade =0;
 
 bool dog, merging, doglegAlldone, outputFlag, suppressFlag;
 int dogcounter;
@@ -93,8 +94,8 @@ int main(int argc, char *argv[])
 	}
 	while (Merge() > 0);
 
+	cout << "\nResults:\n \nDoglegs added to remove cyclic conflicts: " + to_string(dogsmade) ;
 	cout << "\n\nMerging finished\nMerge stats:\nMerged nets: " + to_string(mergedVCG.size()) + "\nTotal height: " + to_string(allVCG.size()) +"\n";
-
 
 	printf("\n\nProgram runtime(ms): %d\n\n", clock() - start);
 	cout << "drawing results...\n\n";
@@ -1011,6 +1012,7 @@ void dogleg(vector<string> path, vector<string> dogpath) {
 	bool direction;
 	bool direcflag = false;
 	int count = 0;
+	dogsmade++;
 
 	//find index at which cycle begins
 trynewdog:
