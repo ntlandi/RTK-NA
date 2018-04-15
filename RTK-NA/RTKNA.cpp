@@ -14,6 +14,7 @@ bool dog, merging, doglegAlldone, outputFlag, suppressFlag;
 int dogcounter;
 vector<float> netvertex;
 double highesthold, C, lowesthold;
+void translatearray();
 
 int main(int argc, char *argv[])
 {
@@ -1840,6 +1841,15 @@ bool sortheighthelper(VCG *dat1, VCG *dat2) {
 	return (dat1->distanceToSink) < (dat2->distanceToSink);
 }
 
+void translatearray() {
+
+	for (size_t i = 0; i < netvertex.size() / 3; i++)
+	{
+		netvertex[3 * i] = netvertex[3 * i] - 0.4;
+		netvertex[3 * i + 1] = netvertex[3 * i + 1] - 0.4;
+	}
+}
+
 int netexistsonTrack(string netid, string dogid) {
 	vector<string> holdnet, holddog;
 	for (size_t i = 0; i < allVCG.size(); i++) {
@@ -2164,7 +2174,8 @@ const char *fragmentShaderSource = "#version 330 core\n"
 "}\n\0";
 
 int draw(void)
-{
+{	
+	translatearray();
 	// glfw: initialize and configure
 	// ------------------------------
 	glfwInit();
