@@ -9,7 +9,7 @@ vector<string> union_zone_diff, *predpath, union_zone, tops, bots, L, Ldog, igno
 net * first;
 vector<net*> netlist;
 vector<VCG*> allVCG, source, sink, mergedVCG;
-int dogsmade =0;
+int dogsmade =0, totaldog =0, dogallno = 0;
 
 bool dog, merging, doglegAlldone, outputFlag, suppressFlag;
 int dogcounter;
@@ -104,10 +104,12 @@ int main(int argc, char *argv[])
 	while (Merge() > 0);
 
 	cout << "\nResults:\n \nDoglegs added to remove cyclic conflicts: " + to_string(dogsmade) ;
+	cout << "\nDoglegs added at every terminal indices: " + to_string(dogallno);
+	cout << "\nTotal Doglegs added: " + to_string(dogsmade+dogallno);
 	cout << "\n\nMerging finished\nMerge stats:\nMerged nets: " + to_string(mergedVCG.size()) + "\nTotal height: " + to_string(allVCG.size()) +"\n";
 
 	printf("\n\nProgram runtime(ms): %d\n\n", clock() - start);
-	cout << "drawing results...\n\n";
+	cout << "Drawing results...\n\n";
 	makedrawvertex();
 	draw();
 
@@ -1314,8 +1316,10 @@ void doglegAll() {
 	int counter = 0;
 	for (size_t i = 0; i < end; i++) {
 		VCG *hold = allVCG[counter];
+		
 		if (hold->dogid == "")
 		{
+			dogallno += hold->indexes.size() - 1;
 			for (size_t j = 1; j < hold->indexes.size(); j++) {
 				VCG *next = new VCG();
 				next->netid = hold->netid;
