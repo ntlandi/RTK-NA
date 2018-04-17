@@ -24,27 +24,26 @@ int main(int argc, char *argv[])
 	merging = false, outputFlag = false, dog = false, suppressFlag = false;
 	string filepath, dog1;
 
-	//getline(cin, filepath);
+	C = 100;
+	highesthold = 0;
+	lowesthold = 10000;
 
-	if (argc > 7)
+
+	if (argc > 1)
 	{
 		for (int i = 1; i < argc; i++) {
 			string arg = argv[i];
 			if (arg == "-d") {
 				dog = true;
-				cout << "doglegging enabled\n";
 			}
 			else if (arg == "-c" || arg == "-C") {
 				C = atoi(argv[i + 1]);
-				cout << "C: " + to_string(C) + " ";
 			}
 			else if (arg == "-f" || arg == "-F") {
 				highesthold = atoi(argv[i + 1]);
-				cout << "f: " + to_string(highesthold) + " ";
 			}
 			else if (arg == "-g" || arg == "-G") {
 				lowesthold = atoi(argv[i + 1]);
-				cout << "g: " + to_string(lowesthold) + " ";
 			}
 			else if (arg == "-i") {
 				filepath = argv[i + 1];
@@ -55,10 +54,18 @@ int main(int argc, char *argv[])
 		}
 	}
 	else {
-		//printHelp();
-		cout << "incorrect amount of variables";
+		cout << "No flags detected";
 		return 1;
 	}
+
+	cout << "C: " + to_string(C) + " ";
+	cout << "f: " + to_string(highesthold) + " ";
+	cout << "g: " + to_string(lowesthold) + " ";
+	if (dog)
+	{
+		cout << "doglegging enabled\n";
+	}
+
 
 	if (!suppressFlag)
 	{
@@ -179,7 +186,6 @@ int findfinalnet(vector<string>::iterator it, string net, string dog, int index)
 }
 
 int findL(vector<string>::iterator it, string net, string dog) {
-	//string::iterator it2;
 	int i = (it - L.begin());
 	auto it2 = find(L.begin() + i, L.end(), net);
 	if (it2 == L.end()) {
@@ -235,7 +241,6 @@ int Merge() {
 				}
 
 				counter++;
-
 				sourceAndSink();
 				findDistance();
 			}
