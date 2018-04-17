@@ -15,7 +15,6 @@ bool dog, merging, doglegAlldone, outputFlag, suppressFlag;
 int dogcounter;
 vector<float> netvertex;
 double highesthold, C, lowesthold;
-void translatearray();
 
 int main(int argc, char *argv[])
 {
@@ -24,11 +23,12 @@ int main(int argc, char *argv[])
 	merging = false, outputFlag = false, dog = false, suppressFlag = false;
 	string filepath, dog1;
 
+	//default values
 	C = 100;
 	highesthold = 0;
 	lowesthold = 10000;
 
-
+	//read in commands
 	if (argc > 1)
 	{
 		for (int i = 1; i < argc; i++) {
@@ -71,6 +71,8 @@ int main(int argc, char *argv[])
 	{
 		cout << "\n--------------------------BEGIN PROGRAM--------------------------\n";
 	}
+
+	//clock for timing
 	clock_t start = clock();
 	parse(filepath);
 	arraytonet();
@@ -114,6 +116,12 @@ int main(int argc, char *argv[])
 
 int origindex;
 
+
+//pathToSink and pathToSource determine if there are any common descendants or predecessors
+//at a given allVCG index
+//netid: netid of the ancestor you are looking for
+//dogid: dogid of the ancestor you are looking for
+//index: index of the allVCG object you wish to compare
 bool pathToSink(string netid, string dogid, int index) {
 	for (size_t i = 0; i < allVCG[index]->decendents.size(); i++) {
 		if (findDesc(allVCG[VCGexists(allVCG[index]->decendents[i], allVCG[index]->dogdesc[i])]->decendents.begin(), netid, dogid, VCGexists(allVCG[index]->decendents[i], allVCG[index]->dogdesc[i])) != -1) {
@@ -155,6 +163,14 @@ bool pathToSource(string netid, string dogid, int index) {
 
 #pragma region Merging
 
+/*
+Find functions are made to find the existence of a net correlated with a dogid
+at a given allVCG index(except for L which does not need it)
+it: iterator to the vector to be iteratored through
+net: netid of the net you are looking for
+dog: dogid of the net you are looking for
+index: index of allVCG
+*/
 int findininet(vector<string>::iterator it, string net, string dog, int index) {
 	vector<string>::iterator it2;
 	it2 = find(ininet[index].begin() + (it - ininet[index].begin()), ininet[index].end(), net);
@@ -200,6 +216,7 @@ int findL(vector<string>::iterator it, string net, string dog) {
 	}
 }
 
+//Merging algorithm according to the YK paper algorithm #1
 int Merge() {
 	merging = true;
 	vector<string> R, zoneHold, Rdog, zoneHoldDog;
@@ -250,6 +267,12 @@ int Merge() {
 	return counter;
 }
 
+//Helper function that takes a list of dog and net ids and determines
+//hueristically the best net to merge
+//Q: list of netids
+//N: list of dogids
+//order is maintained for the both lists so that each netid at an
+//index correlates to its dogid at N index
 vector<string> f(vector<string> Q, vector<string> N) {
 
 	double highest = highesthold;
@@ -273,6 +296,8 @@ vector<string> f(vector<string> Q, vector<string> N) {
 	return high;
 }
 
+//Another hueristic determination methods, except that m is the vector 
+//chosen from method f, with two elements (netid, dogid)
 vector<string> g(vector<string> P, vector<string> E, vector<string> m) {
 
 	double lowest = lowesthold;
@@ -300,6 +325,10 @@ vector<string> g(vector<string> P, vector<string> E, vector<string> m) {
 	return low;
 }
 
+//this method is to guaruntee that lists are unique, the use case is to determine
+//the predecessors and descendents of merged nets and prevent double edges
+//a1,b1: netids of two lists to be merged
+//a2,b2: dogids of two lists to be merged
 vector<vector<string>> unique(vector<string> a1, vector<string> a2, vector<string> b1, vector<string> b2) {
 	vector<string> reta = a1, retb = a2;
 	bool flag = false;
@@ -324,6 +353,15 @@ vector<vector<string>> unique(vector<string> a1, vector<string> a2, vector<strin
 	return ret;
 }
 
+
+/*
+This method takes two vectors containing the net and dog ids of the 
+nets to be merged in (netid, dogid) order
+This updates and merges the VCG objects and replaces every reference 
+of the merged nets with an updated merged VCG object whos netid/dogid
+will be in the format: ("a,b") where a nd b are the corresponding id.
+Spaces are inserted for empty strings
+*/
 void updateVCG(vector<string> a, vector<string> b) {
 	vector<string> newdesc, newpred, newdogdesc, newdogpred;
 
@@ -453,6 +491,11 @@ void updateVCG(vector<string> a, vector<string> b) {
 
 }
 
+/*
+Similar to updateVCG, updateZones updates the references to old
+nets with new nets and updates the final and initial zones used to 
+determine eligible merges
+*/
 void updateZones(vector<string> a, vector<string> b) {
 	int ind, ind1, ind2, i1, i2;
 	for (size_t i = 0; i < ininet.size(); i++) {
@@ -666,7 +709,8 @@ void convertToNetDog() {
 ///////////////////////////////////////////////////////////////////////
 
 #pragma region VCG
-				//Constructs the original VCG graph
+
+//Constructs the original VCG graph
 void makeVCG() {
 	if (!suppressFlag)
 	{
@@ -734,7 +778,6 @@ void makeVCG() {
 		cout << "\nInitial VCG Construction done...";
 	}
 	findDistance();
-	//transientRemoval();
 }
 
 //returns index of netid requested
@@ -749,6 +792,7 @@ int VCGexists(string netid, string dogid) {
 	return -1;
 }
 
+//checks to see if there exists a reference of net in mergedVCG list
 int mergedVCGexists(string netid, string dogid) {
 	for (size_t i = 0; i < mergedVCG.size(); i++) {
 		if (mergedVCG[i]->netid == netid && mergedVCG[i]->dogid == dogid) {
@@ -760,6 +804,8 @@ int mergedVCGexists(string netid, string dogid) {
 }
 
 //fills the source and sink vectors
+//source and sink are determined by seeing if a VCG object has descendants
+//and predecessors, no desc means source connected
 void sourceAndSink() {
 	source.clear();
 	sink.clear();
@@ -773,6 +819,10 @@ void sourceAndSink() {
 	}
 }
 
+
+//attempts to find the distance of each node to both the source and the sink
+//if a cycle is found in distanceFromSource +1 doglegging begins and the 
+//distance algorithm is restarted after doglegging to find accurate distance
 bool findDistance() {
 	if (!suppressFlag)
 	{
@@ -872,6 +922,8 @@ void distFromSink(string netid, string dogid, int counter) {
 	}
 }
 
+//returns the netlist index of a terminal
+//only used before doglegging
 int getNetlistInd(int index) {
 	for (size_t i = 0; i < netlist.size(); i++) {
 		if (index == netlist[i]->netnum) {
@@ -880,6 +932,8 @@ int getNetlistInd(int index) {
 	}
 }
 
+//converts the integer top and bot vectors to
+//string versions tops and bots
 void trackToString() {
 	for (size_t i = 0; i < top.size(); i++) {
 		tops.push_back(to_string(top[i]));
@@ -897,6 +951,7 @@ void trackToString() {
 //parses file into vector of ints to be used later for VCG creation
 //and zoning
 #pragma region Parsing
+//parses input file to find netlist
 void parse(string fileloc) {
 	ifstream file;
 	file.open(fileloc);
@@ -1012,6 +1067,8 @@ int findExistingNet(int net) {
 ///////////////////////////////////////////////////////////////////////
 #pragma region Doglegging
 
+//determines appropriate net to dogleg. Only considers nodes that are at
+//or beyond the original point of contention
 void dogleg(vector<string> path, vector<string> dogpath) {
 	int index = -1;
 	bool direction;
@@ -1104,6 +1161,9 @@ trynewdog:
 }
 
 #pragma region dogleg all code
+
+//updates all nodes at a given index but also finds if there exists a +1
+//dogleg at that index, needed to add constraints to the VCG
 void doglegAllHelper(int netindex) {
 
 	vector<string> topVec, botVec;
@@ -1247,6 +1307,8 @@ void doglegAllHelper(int netindex) {
 #pragma endregion
 }
 
+//begins the process of doglegging every net at each of its respective
+//temrminals
 void doglegAll() {
 	size_t end = allVCG.size();
 	int counter = 0;
@@ -1298,6 +1360,9 @@ void doglegAll() {
 	doglegAlldone = true;
 }
 
+//returns a vector that contains the netid and dogid given the string
+//it came from. Used because tops and bots are updated throughout doglegging
+// ex: "16A" => "16","A" and "16" => "16", ""
 vector<string> getVec(string line) {
 	vector<string> vec;
 	int holdind = 0;
@@ -1340,6 +1405,9 @@ vector<string> getVec(string line) {
 	return vec;
 }
 
+//used to update the VCG for doglegging at all terminals
+//takes +1 doglegs in to account so that references to the +1 doglegs
+//are not forgotten to the void
 void createDoglegVCG() {
 	for (size_t i = 0; i < tops.size(); i++) {
 		doglegAllHelper(i);
@@ -1474,6 +1542,9 @@ void createDoglegVCG() {
 
 
 #pragma region +1 Helper Methods
+//checks for the existance of a certain VCG object in allVCG
+//used to be lazy and not have to parse 16A to 16 and A everytime
+//we  needed it
 int VCGexistsDog(string id) {
 	int i = 0;
 	bool flag = false;
@@ -1494,6 +1565,8 @@ int VCGexistsDog(string id) {
 	return VCGexists(id.substr(0, i), flag ? id.substr(i) : "");
 }
 
+//finds the existance of a predecessor given an iterator, the net you are trying to find
+//the correlated dogid of the net, and the allVCG index of the object you are looking at
 int findPred(vector<string>::iterator it, string net, string dog, int index) {
 	vector<string>::iterator it2;
 	it2 = find(allVCG[index]->predecessors.begin() + (it - allVCG[index]->predecessors.begin()), allVCG[index]->predecessors.end(), net);
@@ -1524,6 +1597,8 @@ int findDesc(vector<string>::iterator it, string net, string dog, int index) {
 	}
 }
 
+
+//returns a vector of strings as 16A => "16","A"
 vector<string> separateTrack(int index, bool track) {
 	vector<string> ret;
 	int i = 0;
@@ -1574,6 +1649,12 @@ vector<string> separateTrack(string id) {
 }
 #pragma endregion
 
+
+/*
+Shifts all doglegs when a dogleg is created. ie: dogleg created between B and C
+updates C to D, E to F, etc
+also handles references in desc and pred
+*/
 void lexiDog(string netid, string dogid) {
 	vector<VCG*> ret;
 
@@ -1652,6 +1733,8 @@ void lexiDog(string netid, string dogid) {
 	}
 }
 
+//Updates the VCG for +1 doglegging, removes all refferences,
+//creates new VCG objects and adds constraints according to the dogleg index
 void updateVCGDog(int ind, int dogind, VCG* rem) {
 	VCG *a = new VCG();
 	VCG *b = new VCG();

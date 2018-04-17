@@ -91,4 +91,5 @@ bool sortheighthelper(VCG *, VCG *);
 void makedrawvertex();
 int mergedVCGexists(string, string);
 int netexistsonTrack(string, string);
+void translatearray();
 #pragma endregion
