@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 	//default values
 	C = 100;
 	highesthold = 0;
-	lowesthold = 10000;
+	lowesthold = 100000;
 
 	//read in commands
 	if (argc > 1)
@@ -1935,8 +1935,8 @@ void translatearray() {
 
 	for (size_t i = 0; i < netvertex.size() / 3; i++)
 	{
-		netvertex[3 * i] = netvertex[3 * i] - 0.4;
-		netvertex[3 * i + 1] = netvertex[3 * i + 1] - 0.4;
+		netvertex[3 * i] = 1.5*( netvertex[3 * i] - 0.4);
+		netvertex[3 * i + 1] = 1.5*(netvertex[3 * i + 1] - 0.4);
 	}
 }
 
@@ -1972,8 +1972,8 @@ int netexistsonTrack(string netid, string dogid) {
 void updatenetvertex(VCG* net, vector<string> netdog, bool flag)
 {
 	float x, y, z = 0;
-	float maxX = tops.size()*1.2; // to scale between 0 - 1
-	float maxY = allVCG.size()*1.2;
+	float maxX = tops.size()*1.05; // to scale between 0 - 1
+	float maxY = allVCG.size()*1.05;
 
 	if (flag)
 	{
@@ -2014,8 +2014,8 @@ void updatenetvertex(VCG* net, vector<string> netdog, bool flag)
 void updateVertnetvertex(VCG* net, vector<string> netdog, bool flag)
 {
 	float x, y, z = 0;
-	float maxX = tops.size()*1.2; // to scale between 0 - 1
-	float maxY = allVCG.size()*1.2;
+	float maxX = tops.size()*1.05; // to scale between 0 - 1
+	float maxY = allVCG.size()*1.05;
 
 	for (size_t i = 0; i < net->indexes.size(); i++) {
 
